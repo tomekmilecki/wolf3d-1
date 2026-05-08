@@ -3781,7 +3781,7 @@ void StartCPMusic(int song)
 		mmerror = false;
 	else
 	{
-		MM_SetLock(&((memptr)audiosegs[STARTMUSIC + chunk]),true);
+		MM_SetLock((memptr*)&audiosegs[STARTMUSIC + chunk],true); /* Wolf3D macOS port: &(memptr)x → (memptr*)&x */
 		SD_StartMusic((MusicGroup far *)audiosegs[STARTMUSIC + chunk]);
 	}
 }

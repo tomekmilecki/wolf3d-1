@@ -12,7 +12,7 @@
 #include <STDIO.H>
 #include <STDLIB.H>
 #include <STRING.H>
-#include <SYS\STAT.H>
+#include <sys/stat.h>  /* Wolf3D macOS port: fixed backslash path separator */
 #include <VALUES.H>
 #include <DIR.H>
 #define __ID_GLOB__
@@ -65,10 +65,13 @@ extern	char		far signon;
 //	v1.0d1
 //
 
+/* Wolf3D macOS port: guard these typedefs — dos_compat.h (prefix header) defines them */
+#ifndef PLATFORM_DOS_COMPAT_H
 typedef	enum	{false,true}	boolean;
 typedef	unsigned	char		byte;
 typedef	unsigned	int			word;
 typedef	unsigned	long		longword;
+#endif
 typedef	byte *					Ptr;
 
 typedef	struct

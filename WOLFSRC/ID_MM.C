@@ -128,6 +128,11 @@ void 		MML_ClearBlock (void);
 
 boolean MML_CheckForXMS (void)
 {
+#ifdef __clang__
+	/* Wolf3D macOS port: no XMS on macOS — report not present */
+	numUMBs = 0;
+	return false;
+#else
 	numUMBs = 0;
 
 asm {
@@ -140,6 +145,7 @@ asm {
 	return false;
 good:
 	return true;
+#endif
 }
 
 
@@ -155,6 +161,10 @@ good:
 
 void MML_SetupXMS (void)
 {
+#ifdef __clang__
+	/* Wolf3D macOS port: no XMS on macOS — no-op */
+	(void)0;
+#else
 	unsigned	base,size;
 
 asm	{
@@ -194,6 +204,7 @@ asm	{
 		goto getmemory;
 
 done:;
+#endif
 }
 
 
@@ -207,6 +218,10 @@ done:;
 
 void MML_ShutdownXMS (void)
 {
+#ifdef __clang__
+	/* Wolf3D macOS port: no XMS on macOS — no-op */
+	(void)0;
+#else
 	int	i;
 	unsigned	base;
 
@@ -218,6 +233,7 @@ asm	mov	ah,XMS_FREEUMB
 asm	mov	dx,[base]
 asm	call	[DWORD PTR XMSaddr]
 	}
+#endif
 }
 
 //==========================================================================
@@ -684,7 +700,7 @@ void MM_SortMem (void)
 			playing += STARTADLIBSOUNDS;
 			break;
 		}
-		MM_SetLock(&(memptr)audiosegs[playing],true);
+		MM_SetLock((memptr*)&audiosegs[playing],true);
 	}
 
 
@@ -755,7 +771,7 @@ void MM_SortMem (void)
 		aftersort();
 
 	if (playing)
-		MM_SetLock(&(memptr)audiosegs[playing],false);
+		MM_SetLock((memptr*)&audiosegs[playing],false);
 }
 
 

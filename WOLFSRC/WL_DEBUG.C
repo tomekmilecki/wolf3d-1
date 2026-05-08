@@ -184,8 +184,10 @@ void PicturePause (void)
 	}
 #endif
 
+#ifndef __clang__
 	asm	mov	ax,0x13
 	asm	int	0x10
+#endif /* Wolf3D macOS port: VGA mode set is a no-op on macOS */
 
 	dest = MK_FP(0xa000,0);
 	_fmemcpy (dest,buffer,64000);

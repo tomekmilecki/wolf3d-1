@@ -671,13 +671,13 @@ void SetupGameLevel (void)
 			{
 			// solid wall
 				tilemap[x][y] = tile;
-				(unsigned)actorat[x][y] = tile;
+				actorat[x][y] = (memptr)(uintptr_t)tile; /* Wolf3D macOS port: lvalue cast removed */
 			}
 			else
 			{
 			// area floor
 				tilemap[x][y] = 0;
-				(unsigned)actorat[x][y] = 0;
+				actorat[x][y] = (memptr)(uintptr_t)0; /* Wolf3D macOS port: lvalue cast removed */
 			}
 		}
 
@@ -1066,7 +1066,8 @@ void PlayDemo (int demonumber)
 	NewGame (1,0);
 	gamestate.mapon = *demoptr++;
 	gamestate.difficulty = gd_hard;
-	length = *((unsigned far *)demoptr)++;
+	/* Wolf3D macOS port: *((unsigned far *)ptr)++ = read uint16 then advance ptr */
+	{ unsigned _tmp; memcpy(&_tmp, demoptr, sizeof(_tmp)); length = _tmp; demoptr += sizeof(_tmp); }
 	demoptr++;
 	lastdemoptr = demoptr-4+length;
 

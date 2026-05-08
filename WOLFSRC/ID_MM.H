@@ -27,8 +27,8 @@
 //--------
 
 #define	XMS_INT			0x2f
-#define	XMS_CALL(v)		_AH = (v);\
-						asm call [DWORD PTR XMSDriver]
+/* Wolf3D macOS port: XMS is not used on macOS; stub out the XMS call macro */
+#define	XMS_CALL(v)		((void)(v))
 
 #define	XMS_VERSION		0x00
 
@@ -55,7 +55,8 @@
 
 //==========================================================================
 
-typedef void _seg * memptr;
+/* Wolf3D macOS port: _seg is Borland far-segment ptr; use void* in flat memory model */
+typedef void * memptr;
 
 typedef struct
 {

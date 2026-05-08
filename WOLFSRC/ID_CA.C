@@ -215,6 +215,12 @@ boolean CA_FarRead (int handle, byte far *dest, long length)
 	if (length>0xffffl)
 		Quit ("CA_FarRead doesn't support 64K reads yet!");
 
+#ifdef __clang__
+	/* Wolf3D macOS port: C replacement for DOS int 21h read */
+	long bytes_read = (long)read(handle, dest, (size_t)length);
+	if (bytes_read != length) { errno = EIO; return false; }
+	return true;
+#else
 asm		push	ds
 asm		mov	bx,[handle]
 asm		mov	cx,[WORD PTR length]
@@ -233,6 +239,7 @@ asm		je	done
 	return	false;
 done:
 	return	true;
+#endif
 }
 
 
@@ -251,6 +258,12 @@ boolean CA_FarWrite (int handle, byte far *source, long length)
 	if (length>0xffffl)
 		Quit ("CA_FarWrite doesn't support 64K reads yet!");
 
+#ifdef __clang__
+	/* Wolf3D macOS port: C replacement for DOS int 21h write */
+	long bytes_written = (long)write(handle, source, (size_t)length);
+	if (bytes_written != length) { errno = EIO; return false; }
+	return true;
+#else
 asm		push	ds
 asm		mov	bx,[handle]
 asm		mov	cx,[WORD PTR length]
@@ -270,6 +283,7 @@ asm		je	done
 
 done:
 	return	true;
+#endif
 }
 
 
@@ -418,6 +432,38 @@ void CAL_OptimizeNodes (huffnode *table)
 void CAL_HuffExpand (byte huge *source, byte huge *dest,
   long length,huffnode *hufftable, boolean screenhack)
 {
+#ifdef __clang__
+  /* Wolf3D macOS port: C replacement for Borland asm Huffman decompressor */
+  huffnode *headptr = hufftable + 254;  /* head node is always node 254 */
+  huffnode *nodeon;
+  byte      curbyte = 0;
+  unsigned  bitpos  = 8;   /* start exhausted so first test triggers reload */
+  long      written = 0;
+
+  (void)screenhack; /* screenhack (VGA plane writes) is a no-op on macOS */
+
+  while (written < length)
+  {
+    nodeon = headptr;
+    /* walk tree until we hit a leaf (bit width < 8 means leaf value) */
+    for (;;)
+    {
+      if (bitpos == 8) { curbyte = *source++; bitpos = 0; }
+      unsigned bit = (curbyte >> bitpos) & 1;
+      bitpos++;
+      unsigned code = bit ? nodeon->bit1 : nodeon->bit0;
+      if (code < 256)
+      {
+        /* leaf node — emit byte */
+        *dest++ = (byte)code;
+        written++;
+        break;
+      }
+      /* internal node: code is the huffnode index (stored as 256 + index) */
+      nodeon = hufftable + (code - 256);
+    }
+  }
+#else
 //  unsigned bit,byte,node,code;
   unsigned sourceseg,sourceoff,destseg,destoff,endoff;
   huffnode *headptr;
@@ -589,7 +635,7 @@ asm	jns	expand		// when length = ffff ffff, done
 
 asm	mov	ax,ss
 asm	mov	ds,ax
-
+#endif /* __clang__ */
 }
 
 
@@ -610,6 +656,10 @@ void CAL_CarmackExpand (unsigned far *source, unsigned far *dest, unsigned lengt
 {
 	unsigned	ch,chhigh,count,offset;
 	unsigned	far *copyptr, far *inptr, far *outptr;
+#ifdef __clang__
+	/* Wolf3D macOS port: byte-pointer helper to avoid lvalue-cast increment */
+	unsigned char *bptr;
+#endif
 
 	length/=2;
 
@@ -625,13 +675,21 @@ void CAL_CarmackExpand (unsigned far *source, unsigned far *dest, unsigned lengt
 			count = ch&0xff;
 			if (!count)
 			{				// have to insert a word containing the tag byte
+#ifdef __clang__
+				bptr = (unsigned char *)inptr; ch |= *bptr; inptr = (unsigned far *)(bptr + 1);
+#else
 				ch |= *((unsigned char far *)inptr)++;
+#endif
 				*outptr++ = ch;
 				length--;
 			}
 			else
 			{
+#ifdef __clang__
+				bptr = (unsigned char *)inptr; offset = *bptr; inptr = (unsigned far *)(bptr + 1);
+#else
 				offset = *((unsigned char far *)inptr)++;
+#endif
 				copyptr = outptr - offset;
 				length -= count;
 				while (count--)
@@ -643,7 +701,11 @@ void CAL_CarmackExpand (unsigned far *source, unsigned far *dest, unsigned lengt
 			count = ch&0xff;
 			if (!count)
 			{				// have to insert a word containing the tag byte
+#ifdef __clang__
+				bptr = (unsigned char *)inptr; ch |= *bptr; inptr = (unsigned far *)(bptr + 1);
+#else
 				ch |= *((unsigned char far *)inptr)++;
+#endif
 				*outptr++ = ch;
 				length --;
 			}
@@ -734,35 +796,29 @@ long CA_RLEWCompress (unsigned huge *source, long length, unsigned huge *dest,
 void CA_RLEWexpand (unsigned huge *source, unsigned huge *dest,long length,
   unsigned rlewtag)
 {
+#ifdef __clang__
+  /* Wolf3D macOS port: C replacement for Borland asm RLEW decompressor */
+  unsigned value, count, i;
+  unsigned huge *end;
+
+  end = dest + (length) / 2;
+  do
+  {
+    value = *source++;
+    if (value != rlewtag)
+      *dest++ = value;
+    else
+    {
+      count = *source++;
+      value = *source++;
+      for (i = 1; i <= count; i++)
+        *dest++ = value;
+    }
+  } while (dest < end);
+#else
 //  unsigned value,count,i;
   unsigned huge *end;
   unsigned sourceseg,sourceoff,destseg,destoff,endseg,endoff;
-
-
-//
-// expand it
-//
-#if 0
-  do
-  {
-	value = *source++;
-	if (value != rlewtag)
-	//
-	// uncompressed
-	//
-	  *dest++=value;
-	else
-	{
-	//
-	// compressed string
-	//
-	  count = *source++;
-	  value = *source++;
-	  for (i=1;i<=count;i++)
-	*dest++ = value;
-	}
-  } while (dest<end);
-#endif
 
   end = dest + (length)/2;
   sourceseg = FP_SEG(source);
@@ -771,16 +827,6 @@ void CA_RLEWexpand (unsigned huge *source, unsigned huge *dest,long length,
   destoff = FP_OFF(dest);
   endseg = FP_SEG(end);
   endoff = FP_OFF(end);
-
-
-//
-// ax = source value
-// bx = tag value
-// cx = repeat counts
-// dx = scratch
-//
-// NOTE: A repeat count that produces 0xfff0 bytes can blow this!
-//
 
 asm	mov	bx,rlewtag
 asm	mov	si,sourceoff
@@ -836,7 +882,7 @@ asm	jb	expand
 
 asm	mov	ax,ss
 asm	mov	ds,ax
-
+#endif /* __clang__ */
 }
 
 
@@ -890,7 +936,7 @@ void CAL_SetupGrFile (void)
 //
 // load the data offsets from ???head.ext
 //
-	MM_GetPtr (&(memptr)grstarts,(NUMCHUNKS+1)*FILEPOSSIZE);
+	MM_GetPtr ((memptr*)&grstarts,(NUMCHUNKS+1)*FILEPOSSIZE);
 
 	strcpy(fname,gheadname);
 	strcat(fname,extension);
@@ -920,7 +966,7 @@ void CAL_SetupGrFile (void)
 //
 // load the pic and sprite headers into the arrays in the data segment
 //
-	MM_GetPtr(&(memptr)pictable,NUMPICS*sizeof(pictabletype));
+	MM_GetPtr((memptr*)&pictable,NUMPICS*sizeof(pictabletype));
 	CAL_GetGrChunkLength(STRUCTPIC);		// position file pointer
 	MM_GetPtr(&compseg,chunkcomplen);
 	CA_FarRead (grhandle,compseg,chunkcomplen);
@@ -958,7 +1004,7 @@ void CAL_SetupMapFile (void)
 		CA_CannotOpen(fname);
 
 	length = filelength(handle);
-	MM_GetPtr (&(memptr)tinf,length);
+	MM_GetPtr ((memptr*)&tinf,length);
 	CA_FarRead(handle, tinf, length);
 	close(handle);
 #else
@@ -995,8 +1041,8 @@ void CAL_SetupMapFile (void)
 		if (pos<0)						// $FFFFFFFF start is a sparse map
 			continue;
 
-		MM_GetPtr(&(memptr)mapheaderseg[i],sizeof(maptype));
-		MM_SetLock(&(memptr)mapheaderseg[i],true);
+		MM_GetPtr((memptr*)&mapheaderseg[i],sizeof(maptype));
+		MM_SetLock((memptr*)&mapheaderseg[i],true);
 		lseek(maphandle,pos,SEEK_SET);
 		CA_FarRead (maphandle,(memptr)mapheaderseg[i],sizeof(maptype));
 	}
@@ -1006,8 +1052,8 @@ void CAL_SetupMapFile (void)
 //
 	for (i=0;i<MAPPLANES;i++)
 	{
-		MM_GetPtr (&(memptr)mapsegs[i],64*64*2);
-		MM_SetLock (&(memptr)mapsegs[i],true);
+		MM_GetPtr ((memptr*)&mapsegs[i],64*64*2);
+		MM_SetLock ((memptr*)&mapsegs[i],true);
 	}
 }
 
@@ -1041,7 +1087,7 @@ void CAL_SetupAudioFile (void)
 		CA_CannotOpen(fname);
 
 	length = filelength(handle);
-	MM_GetPtr (&(memptr)audiostarts,length);
+	MM_GetPtr ((memptr*)&audiostarts,length);
 	CA_FarRead(handle, (byte far *)audiostarts, length);
 	close(handle);
 #else
@@ -1142,7 +1188,7 @@ void CA_CacheAudioChunk (int chunk)
 
 	if (audiosegs[chunk])
 	{
-		MM_SetPurge (&(memptr)audiosegs[chunk],0);
+		MM_SetPurge ((memptr*)&audiosegs[chunk],0);
 		return;							// allready in memory
 	}
 
@@ -1157,7 +1203,7 @@ void CA_CacheAudioChunk (int chunk)
 
 #ifndef AUDIOHEADERLINKED
 
-	MM_GetPtr (&(memptr)audiosegs[chunk],compressed);
+	MM_GetPtr ((memptr*)&audiosegs[chunk],compressed);
 	if (mmerror)
 		return;
 
@@ -1182,7 +1228,7 @@ void CA_CacheAudioChunk (int chunk)
 
 	expanded = *(long far *)source;
 	source += 4;			// skip over length
-	MM_GetPtr (&(memptr)audiosegs[chunk],expanded);
+	MM_GetPtr ((memptr*)&audiosegs[chunk],expanded);
 	if (mmerror)
 		goto done;
 	CAL_HuffExpand (source,audiosegs[chunk],expanded,audiohuffman,false);
@@ -1223,7 +1269,7 @@ void CA_LoadAllSounds (void)
 
 	for (i=0;i<NUMSOUNDS;i++,start++)
 		if (audiosegs[start])
-			MM_SetPurge (&(memptr)audiosegs[start],3);		// make purgable
+			MM_SetPurge ((memptr*)&audiosegs[start],3);		// make purgable
 
 cachein:
 
@@ -1449,7 +1495,7 @@ void CA_CacheMap (int mapnum)
 		pos = mapheaderseg[mapnum]->planestart[plane];
 		compressed = mapheaderseg[mapnum]->planelength[plane];
 
-		dest = &(memptr)mapsegs[plane];
+		dest = (memptr*)&mapsegs[plane];
 
 		lseek(maphandle,pos,SEEK_SET);
 		if (compressed<=BUFFERSIZE)
@@ -1512,7 +1558,7 @@ void CA_UpLevel (void)
 
 	for (i=0;i<NUMCHUNKS;i++)
 		if (grsegs[i])
-			MM_SetPurge (&(memptr)grsegs[i],3);
+			MM_SetPurge ((memptr*)&grsegs[i],3);
 	ca_levelbit<<=1;
 	ca_levelnum++;
 }
@@ -1603,7 +1649,7 @@ void CA_SetGrPurge (void)
 
 	for (i=0;i<NUMCHUNKS;i++)
 		if (grsegs[i])
-			MM_SetPurge (&(memptr)grsegs[i],3);
+			MM_SetPurge ((memptr*)&grsegs[i],3);
 }
 
 
@@ -1628,7 +1674,7 @@ void CA_SetAllPurge (void)
 //
 	for (i=0;i<NUMSNDCHUNKS;i++)
 		if (audiosegs[i])
-			MM_SetPurge (&(memptr)audiosegs[i],3);
+			MM_SetPurge ((memptr*)&audiosegs[i],3);
 
 //
 // free graphics

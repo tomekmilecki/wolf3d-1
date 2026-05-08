@@ -138,6 +138,14 @@ void AsmRefresh (void);			// in WL_DR_A.ASM
 
 #pragma warn -rvl			// I stick the return value in with ASMs
 
+/* Wolf3D macOS port: FixedByFrac uses x86 asm; provide C implementation */
+#ifdef __clang__
+fixed FixedByFrac (fixed a, fixed b)
+{
+    /* Correct C implementation of 16.16 fixed-point multiply */
+    return (fixed)(((int64_t)a * (int64_t)b) >> 16);
+}
+#else
 fixed FixedByFrac (fixed a, fixed b)
 {
 //
@@ -179,6 +187,7 @@ asm	sbb	dx,0
 ansok:;
 
 }
+#endif /* __clang__ */
 
 #pragma warn +rvl
 
@@ -252,11 +261,16 @@ void TransformActor (objtype *ob)
 //
 // calculate height (heightnumerator/(nx>>8))
 //
+#ifdef __clang__
+	/* Wolf3D macOS port: C replacement for x86 asm height calculation */
+	{ int div = nx >> 8; temp = div ? (int)(heightnumerator / div) : 0; }
+#else
 	asm	mov	ax,[WORD PTR heightnumerator]
 	asm	mov	dx,[WORD PTR heightnumerator+2]
 	asm	idiv	[WORD PTR nx+1]			// nx>>8
 	asm	mov	[WORD PTR temp],ax
 	asm	mov	[WORD PTR temp+2],dx
+#endif
 
 	ob->viewheight = temp;
 }
@@ -325,11 +339,16 @@ boolean TransformTile (int tx, int ty, int *dispx, int *dispheight)
 //
 // calculate height (heightnumerator/(nx>>8))
 //
+#ifdef __clang__
+	/* Wolf3D macOS port: C replacement for asm divide */
+	{ int div = nx >> 8; temp = div ? (int)(heightnumerator / div) : 0; }
+#else
 	asm	mov	ax,[WORD PTR heightnumerator]
 	asm	mov	dx,[WORD PTR heightnumerator+2]
 	asm	idiv	[WORD PTR nx+1]			// nx>>8
 	asm	mov	[WORD PTR temp],ax
 	asm	mov	[WORD PTR temp+2],dx
+#endif
 
 	*dispheight = temp;
 
@@ -377,9 +396,15 @@ int	CalcHeight (void)
 	if (nx<mindist)
 		nx=mindist;			// don't let divide overflow
 
+#ifdef __clang__
+	/* Wolf3D macOS port: C replacement for asm divide */
+	{ int div = nx >> 8; return div ? (int)(heightnumerator / div) : 0; }
+#else
 	asm	mov	ax,[WORD PTR heightnumerator]
 	asm	mov	dx,[WORD PTR heightnumerator+2]
 	asm	idiv	[WORD PTR nx+1]			// nx>>8
+#endif
+	return 0; /* unreachable in asm path */
 }
 
 
@@ -397,6 +422,10 @@ long		postsource;
 unsigned	postx;
 unsigned	postwidth;
 
+/* Wolf3D macOS port: ScalePost uses x86 VGA asm — stub for Clang */
+#ifdef __clang__
+void	near ScalePost (void) { /* no-op stub — VGA not available on macOS */ }
+#else
 void	near ScalePost (void)		// VGA version
 {
 	asm	mov	ax,SCREENSEG
@@ -456,6 +485,7 @@ nomore:
 	asm	mov	ax,ss
 	asm	mov	ds,ax
 }
+#endif /* __clang__ */
 
 void  FarScalePost (void)				// just so other files can call
 {
@@ -500,7 +530,7 @@ void HitVertWall (void)
 		else
 		{
 			ScalePost ();
-			(unsigned)postsource = texture;
+			postsource = /* Wolf3D macOS: lvalue cast removed */ texture;
 			postwidth = 1;
 			postx = pixx;
 		}
@@ -530,7 +560,7 @@ void HitVertWall (void)
 			wallpic = vertwall[tilehit];
 
 		*( ((unsigned *)&postsource)+1) = (unsigned)PM_GetPage(wallpic);
-		(unsigned)postsource = texture;
+		postsource = /* Wolf3D macOS: lvalue cast removed */ texture;
 
 	}
 }
@@ -572,7 +602,7 @@ void HitHorizWall (void)
 		else
 		{
 			ScalePost ();
-			(unsigned)postsource = texture;
+			postsource = /* Wolf3D macOS: lvalue cast removed */ texture;
 			postwidth = 1;
 			postx = pixx;
 		}
@@ -602,7 +632,7 @@ void HitHorizWall (void)
 			wallpic = horizwall[tilehit];
 
 		*( ((unsigned *)&postsource)+1) = (unsigned)PM_GetPage(wallpic);
-		(unsigned)postsource = texture;
+		postsource = /* Wolf3D macOS: lvalue cast removed */ texture;
 	}
 
 }
@@ -639,7 +669,7 @@ void HitHorizDoor (void)
 		else
 		{
 			ScalePost ();
-			(unsigned)postsource = texture;
+			postsource = /* Wolf3D macOS: lvalue cast removed */ texture;
 			postwidth = 1;
 			postx = pixx;
 		}
@@ -671,7 +701,7 @@ void HitHorizDoor (void)
 		}
 
 		*( ((unsigned *)&postsource)+1) = (unsigned)PM_GetPage(doorpage);
-		(unsigned)postsource = texture;
+		postsource = /* Wolf3D macOS: lvalue cast removed */ texture;
 	}
 }
 
@@ -707,7 +737,7 @@ void HitVertDoor (void)
 		else
 		{
 			ScalePost ();
-			(unsigned)postsource = texture;
+			postsource = /* Wolf3D macOS: lvalue cast removed */ texture;
 			postwidth = 1;
 			postx = pixx;
 		}
@@ -739,7 +769,7 @@ void HitVertDoor (void)
 		}
 
 		*( ((unsigned *)&postsource)+1) = (unsigned)PM_GetPage(doorpage+1);
-		(unsigned)postsource = texture;
+		postsource = /* Wolf3D macOS: lvalue cast removed */ texture;
 	}
 }
 
@@ -786,7 +816,7 @@ void HitHorizPWall (void)
 		else
 		{
 			ScalePost ();
-			(unsigned)postsource = texture;
+			postsource = /* Wolf3D macOS: lvalue cast removed */ texture;
 			postwidth = 1;
 			postx = pixx;
 		}
@@ -804,7 +834,7 @@ void HitHorizPWall (void)
 		wallpic = horizwall[tilehit&63];
 
 		*( ((unsigned *)&postsource)+1) = (unsigned)PM_GetPage(wallpic);
-		(unsigned)postsource = texture;
+		postsource = /* Wolf3D macOS: lvalue cast removed */ texture;
 	}
 
 }
@@ -850,7 +880,7 @@ void HitVertPWall (void)
 		else
 		{
 			ScalePost ();
-			(unsigned)postsource = texture;
+			postsource = /* Wolf3D macOS: lvalue cast removed */ texture;
 			postwidth = 1;
 			postx = pixx;
 		}
@@ -868,7 +898,7 @@ void HitVertPWall (void)
 		wallpic = vertwall[tilehit&63];
 
 		*( ((unsigned *)&postsource)+1) = (unsigned)PM_GetPage(wallpic);
-		(unsigned)postsource = texture;
+		postsource = /* Wolf3D macOS: lvalue cast removed */ texture;
 	}
 
 }
@@ -967,6 +997,10 @@ unsigned vgaCeiling[]=
 =====================
 */
 
+/* Wolf3D macOS port: VGAClearScreen uses x86 VGA asm — stub for Clang */
+#ifdef __clang__
+void VGAClearScreen (void) { /* no-op stub — VGA rendering replaced by SDL2 */ }
+#else
 void VGAClearScreen (void)
 {
  unsigned ceiling=vgaCeiling[gamestate.episode*10+mapon];
@@ -1010,6 +1044,7 @@ asm	add	di,dx
 asm	dec	bh
 asm	jnz	bottomloop
 }
+#endif /* __clang__ */
 
 //==========================================================================
 
@@ -1343,12 +1378,17 @@ void	ThreeDRefresh (void)
 //
 // clear out the traced array
 //
+#ifdef __clang__
+	/* Wolf3D macOS port: C replacement for asm memset of spotvis */
+	memset(spotvis, 0, sizeof(spotvis));
+#else
 asm	mov	ax,ds
 asm	mov	es,ax
 asm	mov	di,OFFSET spotvis
 asm	xor	ax,ax
 asm	mov	cx,2048							// 64*64 / 2
 asm	rep stosw
+#endif
 
 	bufferofs += screenofs;
 
@@ -1380,6 +1420,7 @@ asm	rep stosw
 	bufferofs -= screenofs;
 	displayofs = bufferofs;
 
+#ifndef __clang__
 	asm	cli
 	asm	mov	cx,[displayofs]
 	asm	mov	dx,3d4h		// CRTC address register
@@ -1389,6 +1430,7 @@ asm	rep stosw
 	asm	mov	al,ch
 	asm	out	dx,al   	// set the high byte
 	asm	sti
+#endif /* Wolf3D macOS port: CRTC register writes are no-ops on macOS */
 
 	bufferofs += SCREENSIZE;
 	if (bufferofs > PAGE3START)

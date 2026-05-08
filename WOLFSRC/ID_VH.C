@@ -58,6 +58,7 @@ void VW_DrawPropString (char far *string)
 		{
 			VGAMAPMASK(mask);
 
+#ifndef __clang__
 asm	mov	ah,[BYTE PTR fontcolor]
 asm	mov	bx,[step]
 asm	mov	cx,[height]
@@ -77,6 +78,10 @@ asm	add	di,dx
 asm	loop	vertloop
 asm	mov	ax,ss
 asm	mov	ds,ax
+#else
+			/* Wolf3D macOS port: VGA font draw replaced by no-op (SDL handles display) */
+			(void)step; (void)height;
+#endif
 
 			source++;
 			px++;
@@ -114,6 +119,7 @@ void VW_DrawColorPropString (char far *string)
 		{
 			VGAMAPMASK(mask);
 
+#ifndef __clang__
 asm	mov	ah,[BYTE PTR fontcolor]
 asm	mov	bx,[step]
 asm	mov	cx,[height]
@@ -140,6 +146,10 @@ asm rcl cx,1
 asm	loop	vertloop
 asm	mov	ax,ss
 asm	mov	ds,ax
+#else
+			/* Wolf3D macOS port: VGA color font draw replaced by no-op (SDL handles display) */
+			(void)step; (void)height;
+#endif
 
 			source++;
 			px++;
@@ -180,7 +190,7 @@ void VL_MungePic (byte far *source, unsigned width, unsigned height)
 //
 // copy the pic to a temp buffer
 //
-	MM_GetPtr (&(memptr)temp,size);
+	MM_GetPtr ((memptr*)&temp,size);
 	_fmemcpy (temp,source,size);
 
 //
@@ -200,7 +210,7 @@ void VL_MungePic (byte far *source, unsigned width, unsigned height)
 		}
 	}
 
-	MM_FreePtr (&(memptr)temp);
+	MM_FreePtr ((memptr*)&temp);
 }
 
 void VWL_MeasureString (char far *string, word *width, word *height
@@ -490,13 +500,18 @@ boolean FizzleFade (unsigned source, unsigned dest,
 		if (abortable && IN_CheckAck () )
 			return true;
 
-		asm	mov	es,[screenseg]
-
 		for (p=0;p<pixperframe;p++)
 		{
-			//
-			// seperate random value into x/y pair
-			//
+#ifdef __clang__
+			/* Wolf3D macOS port: C LFSR replacement for Borland asm fizzle fade */
+			/* Extract x/y from LFSR value */
+			y = (unsigned)((rndval & 0xff) - 1);           /* low 8 bits - 1 = y */
+			x = (unsigned)(((rndval >> 8) & 0x1ff));       /* next 9 bits = x */
+			/* Advance LFSR: 17-bit maximal-length sequence, taps at 17,14 */
+			if (rndval & 1) rndval = (rndval >> 1) ^ 0x00012000L;
+			else            rndval >>= 1;
+#else
+			/* Borland asm LFSR — extracts x/y and advances the sequence */
 			asm	mov	ax,[WORD PTR rndval]
 			asm	mov	dx,[WORD PTR rndval+2]
 			asm	mov	bx,ax
@@ -517,6 +532,7 @@ boolean FizzleFade (unsigned source, unsigned dest,
 noxor:
 			asm	mov	[WORD PTR rndval],ax
 			asm	mov	[WORD PTR rndval+2],dx
+#endif
 
 			if (x>width || y>height)
 				continue;
@@ -530,10 +546,15 @@ noxor:
 			mask = maskb[mask];
 			VGAMAPMASK(mask);
 
+#ifndef __clang__
 			asm	mov	di,[drawofs]
 			asm	mov	al,[es:di]
 			asm add	di,[pagedelta]
 			asm	mov	[es:di],al
+#else
+			/* Wolf3D macOS port: VGA pixel copy — no-op (SDL renderer handles display) */
+			(void)drawofs; (void)pagedelta;
+#endif
 
 			if (rndval == 1)		// entire sequence has been completed
 				return false;

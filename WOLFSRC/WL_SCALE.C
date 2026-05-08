@@ -75,7 +75,7 @@ void SetupScaling (int maxscaleheight)
 	for (i=1;i<MAXSCALEHEIGHT;i++)
 	{
 		if (scaledirectory[i])
-			MM_FreePtr (&(memptr)scaledirectory[i]);
+			MM_FreePtr ((memptr*)&scaledirectory[i]);
 		if (i>=stepbytwo)
 			i += 2;
 	}
@@ -87,15 +87,15 @@ void SetupScaling (int maxscaleheight)
 // build the compiled scalers
 //
 	stepbytwo = viewheight/2;	// save space by double stepping
-	MM_GetPtr (&(memptr)work,20000);
+	MM_GetPtr ((memptr*)&work,20000);
 
 	for (i=1;i<=maxscaleheight;i++)
 	{
-		BuildCompScale (i*2,&(memptr)scaledirectory[i]);
+		BuildCompScale (i*2,(memptr*)&scaledirectory[i]);
 		if (i>=stepbytwo)
 			i+= 2;
 	}
-	MM_FreePtr (&(memptr)work);
+	MM_FreePtr ((memptr*)&work);
 
 //
 // compact memory and lock down scalers
@@ -103,7 +103,7 @@ void SetupScaling (int maxscaleheight)
 	MM_SortMem ();
 	for (i=1;i<=maxscaleheight;i++)
 	{
-		MM_SetLock (&(memptr)scaledirectory[i],true);
+		MM_SetLock ((memptr*)&scaledirectory[i],true);
 		fullscalefarcall[i] = (unsigned)scaledirectory[i];
 		fullscalefarcall[i] <<=16;
 		fullscalefarcall[i] += scaledirectory[i]->codeofs[0];
@@ -210,7 +210,7 @@ unsigned BuildCompScale (int height, memptr *finalspot)
 			*code++ = 0x26;
 			*code++ = 0x88;
 			*code++ = 0x85;
-			*((unsigned far *)code)++ = startpix*SCREENBWIDE;
+			{ unsigned _wsc_tmp = (unsigned)(startpix*SCREENBWIDE); memcpy(code, &_wsc_tmp, sizeof(unsigned)); code += sizeof(unsigned); } /* Wolf3D macOS: lvalue cast fix */
 		}
 
 	}
@@ -246,6 +246,8 @@ extern	unsigned	maskword;
 byte	mask1,mask2,mask3;
 
 
+/* Wolf3D macOS port: ScaleLine uses x86 Borland asm — stub for Clang */
+#ifndef __clang__
 void near ScaleLine (void)
 {
 asm	mov	cx,WORD PTR [linescale+2]
@@ -392,6 +394,10 @@ asm	jmp	scaletriple					// do the next segment
 
 
 }
+#else
+/* Wolf3D macOS port: ScaleLine stub — x86 VGA asm not available on macOS */
+void near ScaleLine (void) { /* no-op stub */ }
+#endif /* !__clang__ */
 
 
 /*
@@ -448,7 +454,8 @@ void ScaleShape (int xcenter, int shapenum, unsigned height)
 
 	while ( --srcx >=stopx && slinex>0)
 	{
-		(unsigned)linecmds = *cmdptr--;
+		/* Wolf3D macOS port: lvalue cast; linecmds is unsigned* */
+		linecmds = (unsigned*)(uintptr_t)(*cmdptr--);
 		if ( !(slinewidth = comptable->width[srcx]) )
 			continue;
 
@@ -531,7 +538,8 @@ void ScaleShape (int xcenter, int shapenum, unsigned height)
 
 	while ( ++srcx <= stopx && (slinex+=slinewidth)<viewwidth)
 	{
-		(unsigned)linecmds = *cmdptr++;
+		/* Wolf3D macOS port: lvalue cast; linecmds is unsigned* */
+		linecmds = (unsigned*)(uintptr_t)(*cmdptr++);
 		if ( !(slinewidth = comptable->width[srcx]) )
 			continue;
 
@@ -650,7 +658,8 @@ void SimpleScaleShape (int xcenter, int shapenum, unsigned height)
 
 	while ( --srcx >=stopx )
 	{
-		(unsigned)linecmds = *cmdptr--;
+		/* Wolf3D macOS port: lvalue cast; linecmds is unsigned* */
+		linecmds = (unsigned*)(uintptr_t)(*cmdptr--);
 		if ( !(slinewidth = comptable->width[srcx]) )
 			continue;
 
@@ -678,7 +687,8 @@ void SimpleScaleShape (int xcenter, int shapenum, unsigned height)
 
 	while ( ++srcx <= stopx )
 	{
-		(unsigned)linecmds = *cmdptr++;
+		/* Wolf3D macOS port: lvalue cast; linecmds is unsigned* */
+		linecmds = (unsigned*)(uintptr_t)(*cmdptr++);
 		if ( !(slinewidth = comptable->width[srcx]) )
 			continue;
 

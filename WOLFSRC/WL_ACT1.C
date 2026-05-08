@@ -146,7 +146,7 @@ void SpawnStatic (int tilex, int tiley, int type)
 	switch (statinfo[type].type)
 	{
 	case block:
-		(unsigned)actorat[tilex][tiley] = 1;		// consider it a blocking tile
+		actorat[tilex][tiley] = (memptr)(uintptr_t)(1); /* Wolf3D macOS port: lvalue cast removed */		// consider it a blocking tile
 	case dressing:
 		laststatobj->flags = 0;
 		break;
@@ -362,7 +362,7 @@ void SpawnDoor (int tilex, int tiley, boolean vertical, int lock)
 	lastdoorobj->lock = lock;
 	lastdoorobj->action = dr_closed;
 
-	(unsigned)actorat[tilex][tiley] = doornum | 0x80;	// consider it a solid wall
+	actorat[tilex][tiley] = (memptr)(uintptr_t)(doornum | 0x80); /* Wolf3D macOS port: lvalue cast removed */	// consider it a solid wall
 
 //
 // make the door tile a special tile, and mark the adjacent tiles
@@ -479,8 +479,7 @@ void CloseDoor (int door)
 //
 // make the door space solid
 //
-	(unsigned)actorat[tilex][tiley]
-		= door | 0x80;
+	actorat[tilex][tiley] = (memptr)(uintptr_t)(door | 0x80); /* Wolf3D macOS port: lvalue cast removed */
 }
 
 
@@ -624,7 +623,7 @@ void DoorClosing (int door)
 	tilex = doorobjlist[door].tilex;
 	tiley = doorobjlist[door].tiley;
 
-	if ( ((unsigned)actorat[tilex][tiley] != (door | 0x80))
+	if ( ((unsigned)(uintptr_t)actorat[tilex][tiley] != (door | 0x80))
 	|| (player->tilex == tilex && player->tiley == tiley) )
 	{			// something got inside the door
 		OpenDoor (door);
@@ -749,8 +748,7 @@ void PushWall (int checkx, int checky, int dir)
 			SD_PlaySound (NOWAYSND);
 			return;
 		}
-		(unsigned)actorat[checkx][checky-1] =
-		tilemap[checkx][checky-1] = oldtile;
+		actorat[checkx][checky-1] = (memptr)(uintptr_t)(tilemap[checkx][checky-1] = oldtile); /* Wolf3D macOS port: lvalue cast removed */
 		break;
 
 	case di_east:
@@ -759,8 +757,7 @@ void PushWall (int checkx, int checky, int dir)
 			SD_PlaySound (NOWAYSND);
 			return;
 		}
-		(unsigned)actorat[checkx+1][checky] =
-		tilemap[checkx+1][checky] = oldtile;
+		actorat[checkx+1][checky] = (memptr)(uintptr_t)(tilemap[checkx+1][checky] = oldtile); /* Wolf3D macOS port: lvalue cast removed */
 		break;
 
 	case di_south:
@@ -769,8 +766,7 @@ void PushWall (int checkx, int checky, int dir)
 			SD_PlaySound (NOWAYSND);
 			return;
 		}
-		(unsigned)actorat[checkx][checky+1] =
-		tilemap[checkx][checky+1] = oldtile;
+		actorat[checkx][checky+1] = (memptr)(uintptr_t)(tilemap[checkx][checky+1] = oldtile); /* Wolf3D macOS port: lvalue cast removed */
 		break;
 
 	case di_west:
@@ -779,8 +775,7 @@ void PushWall (int checkx, int checky, int dir)
 			SD_PlaySound (NOWAYSND);
 			return;
 		}
-		(unsigned)actorat[checkx-1][checky] =
-		tilemap[checkx-1][checky] = oldtile;
+		actorat[checkx-1][checky] = (memptr)(uintptr_t)(tilemap[checkx-1][checky] = oldtile); /* Wolf3D macOS port: lvalue cast removed */
 		break;
 	}
 
@@ -826,7 +821,7 @@ void MovePWalls (void)
 		// the tile can now be walked into
 		//
 		tilemap[pwallx][pwally] = 0;
-		(unsigned)actorat[pwallx][pwally] = 0;
+		actorat[pwallx][pwally] = (memptr)(uintptr_t)(0); /* Wolf3D macOS port: lvalue cast removed */
 		*(mapsegs[0]+farmapylookup[pwally]+pwallx) = player->areanumber+AREATILE;
 
 		//
@@ -851,8 +846,7 @@ void MovePWalls (void)
 					pwallstate = 0;
 					return;
 				}
-				(unsigned)actorat[pwallx][pwally-1] =
-				tilemap[pwallx][pwally-1] = oldtile;
+				actorat[pwallx][pwally-1] = (memptr)(uintptr_t)(tilemap[pwallx][pwally-1] = oldtile); /* Wolf3D macOS port: lvalue cast removed */
 				break;
 
 			case di_east:
@@ -862,8 +856,7 @@ void MovePWalls (void)
 					pwallstate = 0;
 					return;
 				}
-				(unsigned)actorat[pwallx+1][pwally] =
-				tilemap[pwallx+1][pwally] = oldtile;
+				actorat[pwallx+1][pwally] = (memptr)(uintptr_t)(tilemap[pwallx+1][pwally] = oldtile); /* Wolf3D macOS port: lvalue cast removed */
 				break;
 
 			case di_south:
@@ -873,8 +866,7 @@ void MovePWalls (void)
 					pwallstate = 0;
 					return;
 				}
-				(unsigned)actorat[pwallx][pwally+1] =
-				tilemap[pwallx][pwally+1] = oldtile;
+				actorat[pwallx][pwally+1] = (memptr)(uintptr_t)(tilemap[pwallx][pwally+1] = oldtile); /* Wolf3D macOS port: lvalue cast removed */
 				break;
 
 			case di_west:
@@ -884,8 +876,7 @@ void MovePWalls (void)
 					pwallstate = 0;
 					return;
 				}
-				(unsigned)actorat[pwallx-1][pwally] =
-				tilemap[pwallx-1][pwally] = oldtile;
+				actorat[pwallx-1][pwally] = (memptr)(uintptr_t)(tilemap[pwallx-1][pwally] = oldtile); /* Wolf3D macOS port: lvalue cast removed */
 				break;
 			}
 

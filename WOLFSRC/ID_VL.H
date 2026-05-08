@@ -98,6 +98,12 @@ extern	unsigned	bordercolor;
 // VGA hardware routines
 //
 
+#ifdef __clang__
+/* Wolf3D macOS port: VGA hardware macros are no-ops on macOS */
+#define VGAWRITEMODE(x) ((void)(x))
+#define VGAMAPMASK(x)   ((void)(x))
+#define VGAREADMAP(x)   ((void)(x))
+#else
 #define VGAWRITEMODE(x) asm{\
 cli;\
 mov dx,GC_INDEX;\
@@ -112,6 +118,7 @@ sti;}
 
 #define VGAMAPMASK(x) asm{cli;mov dx,SC_INDEX;mov al,SC_MAPMASK;mov ah,x;out dx,ax;sti;}
 #define VGAREADMAP(x) asm{cli;mov dx,GC_INDEX;mov al,GC_READMAP;mov ah,x;out dx,ax;sti;}
+#endif
 
 
 void VL_Startup (void);

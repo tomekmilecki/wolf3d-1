@@ -477,7 +477,11 @@ enum	{
 =============================================================================
 */
 
+/* Wolf3D macOS port: fixed is defined in dos_compat.h (prefix header) as int32_t
+ * On macOS/LP64, long is 64-bit, so we keep this as a compatible 32-bit type */
+#ifndef PLATFORM_DOS_COMPAT_H
 typedef long fixed;
+#endif
 
 typedef enum {
 	di_north,
@@ -987,7 +991,7 @@ extern	fixed 		far sintable[],far *costable;
 // derived constants
 //
 extern	fixed 	scale;
-extern	long	heightnumerator,mindist;
+/* Wolf3D macOS port: removed duplicate 'long mindist' — already declared as fixed above */
 
 //
 // refresh variables

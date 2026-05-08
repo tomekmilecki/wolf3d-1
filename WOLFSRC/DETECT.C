@@ -1,3 +1,6 @@
+/* Wolf3D macOS port: SoundBlaster hardware detection not needed on macOS */
+#ifndef __clang__
+
 ///////////////////////////////////////////////////////////////////////////
 //
 //	SDL_CheckSB() - Checks to see if a SoundBlaster resides at a
@@ -84,4 +87,5 @@ SDL_DetectSoundBlaster(int port)
 		return(SDL_CheckSB(port));	// User specified address or default
 }
 
-
+
+#endif /* !__clang__ */

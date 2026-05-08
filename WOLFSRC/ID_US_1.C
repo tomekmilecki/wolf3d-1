@@ -91,16 +91,14 @@ static	WindowRec	wr;
 		char		c,*s,*t;
 
 
-	di = _DI;
+	(void)di; /* Wolf3D macOS port: _DI register not used */
 
 	if (ax < 0)
 		s = "Device Error";
 	else
 	{
-		if ((di & 0x00ff) == 0)
-			s = "Drive ~ is Write Protected";
-		else
-			s = "Error on Drive ~";
+		/* di is unused on macOS — always show generic error */
+		s = "Error on Drive ~";
 		for (t = buf;*s;s++,t++)	// Can't use sprintf()
 			if ((*t = *s) == '~')
 				*t = (ax & 0x00ff) + 'A';
@@ -108,9 +106,8 @@ static	WindowRec	wr;
 		s = buf;
 	}
 
-	c = peekb(0x40,0x49);	// Get the current screen mode
-	if ((c < 4) || (c == 7))
-		goto oh_kill_me;
+	/* Wolf3D macOS port: skip DOS screen mode check, go directly to UI */
+	(void)c;
 
 	// DEBUG - handle screen cleanup
 
@@ -121,7 +118,9 @@ static	WindowRec	wr;
 	VW_UpdateScreen();
 	IN_ClearKeysDown();
 
+#ifndef __clang__
 asm	sti	// Let the keyboard interrupts come through
+#endif
 
 	while (true)
 	{
@@ -604,15 +603,18 @@ US_LineInput(int x,int y,char *buf,char *def,boolean escok,
 		if (cursorvis)
 			USL_XORICursor(x,y,s,cursor);
 
+#ifndef __clang__
 	asm	pushf
 	asm	cli
-
+#endif
 		sc = LastScan;
 		LastScan = sc_None;
 		c = LastASCII;
 		LastASCII = key_None;
 
+#ifndef __clang__
 	asm	popf
+#endif
 
 		switch (sc)
 		{

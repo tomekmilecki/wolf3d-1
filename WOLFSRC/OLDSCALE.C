@@ -1,4 +1,6 @@
 // WL_SCALE.C
+/* Wolf3D macOS port: entire OLDSCALE.C excluded on Clang — WL_SCALE.C provides macOS implementations */
+#ifndef __clang__
 
 #include "WL_DEF.H"
 #pragma hdrstop
@@ -735,3 +737,5 @@ unsigned	far *linecmds;
 long		linescale;
 unsigned	maskword;
 
+
+#endif /* !__clang__ */

@@ -57,6 +57,10 @@ static	char		*ParmStrings[] = {"nomain","noems","noxms",nil};
 void
 PML_MapEMS(word logical,word physical)
 {
+#ifdef __clang__
+	/* Wolf3D macOS port: EMS not available on macOS — no-op */
+	(void)logical; (void)physical;
+#else
 	_AL = physical;
 	_BX = logical;
 	_DX = EMSHandle;
@@ -65,6 +69,7 @@ asm	int	EMS_INT
 
 	if (_AH)
 		Quit("PML_MapEMS: Page mapping failed");
+#endif
 }
 
 //
@@ -81,6 +86,12 @@ asm	int	EMS_INT
 boolean
 PML_StartupEMS(void)
 {
+#ifdef __clang__
+	/* Wolf3D macOS port: EMS not available on macOS */
+	EMSPresent = false;
+	EMSAvail = 0;
+	return false;
+#else
 	int		i;
 	long	size;
 
@@ -163,6 +174,7 @@ asm	jc	error
 
 error:
 	return(EMSPresent);
+#endif
 }
 
 //
@@ -171,6 +183,10 @@ error:
 void
 PML_ShutdownEMS(void)
 {
+#ifdef __clang__
+	/* Wolf3D macOS port: EMS not available on macOS — no-op */
+	(void)0;
+#else
 	if (EMSPresent)
 	{
 	asm	mov	ah,EMS_FREEPAGES
@@ -179,6 +195,7 @@ PML_ShutdownEMS(void)
 		if (_AH)
 			Quit ("PML_ShutdownEMS: Error freeing EMS");
 	}
+#endif
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -196,6 +213,12 @@ PML_ShutdownEMS(void)
 boolean
 PML_StartupXMS(void)
 {
+#ifdef __clang__
+	/* Wolf3D macOS port: XMS not available on macOS */
+	XMSPresent = false;
+	XMSAvail = 0;
+	return false;
+#else
 	XMSPresent = false;					// Assume failure
 	XMSAvail = 0;
 
@@ -234,6 +257,7 @@ asm	mov	[WORD PTR XMSDriver+2],es		// function pointer to XMS driver
 	XMSPresent = true;
 error:
 	return(XMSPresent);
+#endif
 }
 
 //
@@ -243,6 +267,10 @@ error:
 void
 PML_XMSCopy(boolean toxms,byte far *addr,word xmspage,word length)
 {
+#ifdef __clang__
+	/* Wolf3D macOS port: XMS not available on macOS — no-op */
+	(void)toxms; (void)addr; (void)xmspage; (void)length;
+#else
 	longword	xoffset;
 	struct
 	{
@@ -270,6 +298,7 @@ asm	push si
 asm	pop	si
 	if (!_AX)
 		Quit("PML_XMSCopy: Error on copy");
+#endif
 }
 
 #if 1
@@ -303,6 +332,10 @@ PML_CopyFromXMS(byte far *target,int sourcepage,word length)
 void
 PML_ShutdownXMS(void)
 {
+#ifdef __clang__
+	/* Wolf3D macOS port: XMS not available on macOS — no-op */
+	(void)0;
+#else
 	if (XMSPresent)
 	{
 		_DX = XMSHandle;
@@ -310,6 +343,7 @@ PML_ShutdownXMS(void)
 		if (_BL)
 			Quit("PML_ShutdownXMS: Error freeing XMS");
 	}
+#endif
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -502,8 +536,8 @@ PML_OpenPageFile(void)
 
 	// Allocate and clear the page list
 	PMNumBlocks = ChunksInFile;
-	MM_GetPtr(&(memptr)PMSegPages,sizeof(PageListStruct) * PMNumBlocks);
-	MM_SetLock(&(memptr)PMSegPages,true);
+	MM_GetPtr((memptr*)&PMSegPages,sizeof(PageListStruct) * PMNumBlocks);
+	MM_SetLock((memptr*)&PMSegPages,true);
 	PMPages = (PageListStruct far *)PMSegPages;
 	_fmemset(PMPages,0,sizeof(PageListStruct) * PMNumBlocks);
 
@@ -538,8 +572,8 @@ PML_ClosePageFile(void)
 		close(PageFile);
 	if (PMSegPages)
 	{
-		MM_SetLock(&(memptr)PMSegPages,false);
-		MM_FreePtr(&(void _seg *)PMSegPages);
+		MM_SetLock((memptr*)&PMSegPages,false);
+		MM_FreePtr((memptr*)&PMSegPages); /* Wolf3D macOS port: &(void _seg *)x → (memptr*)&x */
 	}
 }
 
