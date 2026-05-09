@@ -67,7 +67,12 @@ void EndSpear(void)
 	VW_UpdateScreen ();
 	IN_StartAck ();
 	TimeCount = 0;
-	while (!IN_CheckAck () && TimeCount < 700);
+	while (!IN_CheckAck () && TimeCount < 700)
+#ifdef __clang__
+		SDL_Delay(1);
+#else
+	;
+#endif
 
 	PrintX = 0;
 	PrintY = 180;
@@ -77,7 +82,12 @@ void EndSpear(void)
 	VW_UpdateScreen ();
 	IN_StartAck ();
 	TimeCount = 0;
-	while (!IN_CheckAck () && TimeCount < 700);
+	while (!IN_CheckAck () && TimeCount < 700)
+#ifdef __clang__
+		SDL_Delay(1);
+#else
+	;
+#endif
 
 	VW_FadeOut ();
 

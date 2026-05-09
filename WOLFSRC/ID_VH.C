@@ -561,7 +561,11 @@ noxor:
 		}
 		frame++;
 		while (TimeCount<frame)		// don't go too fast
+#ifdef __clang__
+			SDL_Delay(1);
+#else
 		;
+#endif
 	} while (1);
 
 

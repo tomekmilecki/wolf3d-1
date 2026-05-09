@@ -1282,6 +1282,9 @@ void CalcTics (void)
 	{
 		newtime = TimeCount;
 		tics = newtime-lasttimecount;
+#ifdef __clang__
+		if (!tics) SDL_Delay(1);	/* yield CPU between timer ticks on macOS */
+#endif
 	} while (!tics);			// make sure at least one tic passes
 
 	lasttimecount = newtime;

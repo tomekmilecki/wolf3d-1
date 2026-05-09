@@ -207,7 +207,7 @@ int songs[]=
  XFUNKIE_MUS,
  XDEATH_MUS,
  XGETYOU_MUS,		// DON'T KNOW
- ULTIMATE_MUS,	// Trans Gr”sse
+ ULTIMATE_MUS,	// Trans Grï¿½sse
 
  DUNGEON_MUS,
  GOINGAFT_MUS,
@@ -463,7 +463,11 @@ void PollControls (void)
 	if (demoplayback)
 	{
 		while (TimeCount<lasttimecount+DEMOTICS)
+#ifdef __clang__
+			SDL_Delay(1);
+#else
 		;
+#endif
 		TimeCount = lasttimecount + DEMOTICS;
 		lasttimecount += DEMOTICS;
 		tics = DEMOTICS;
@@ -474,7 +478,11 @@ void PollControls (void)
 // take DEMOTICS or more tics, and modify Timecount to reflect time taken
 //
 		while (TimeCount<lasttimecount+DEMOTICS)
+#ifdef __clang__
+			SDL_Delay(1);
+#else
 		;
+#endif
 		TimeCount = lasttimecount + DEMOTICS;
 		lasttimecount += DEMOTICS;
 		tics = DEMOTICS;

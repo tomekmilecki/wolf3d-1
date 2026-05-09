@@ -1296,7 +1296,12 @@ startplayloop:
 
 				while(TimeCount < lasttimecount+150)
 				//while(DigiPlaying!=false)
+				{
+#ifdef __clang__
+					SDL_Delay(1);
+#endif
 					SD_Poll();
+				}
 			}
 			else
 				SD_WaitSoundDone();

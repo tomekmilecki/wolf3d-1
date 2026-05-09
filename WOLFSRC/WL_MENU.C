@@ -3370,7 +3370,12 @@ void DrawHalfStep(int x,int y)
 	VW_UpdateScreen();
 	SD_PlaySound(MOVEGUN1SND);
 	TimeCount=0;
-	while(TimeCount<8);
+	while(TimeCount<8)
+#ifdef __clang__
+		SDL_Delay(1);
+#else
+	;
+#endif
 }
 
 
@@ -3410,6 +3415,9 @@ void TicDelay(int count)
 	TimeCount=0;
 	do
 	{
+#ifdef __clang__
+		SDL_Delay(1);
+#endif
 		ReadAnyControl(&ci);
 	} while(TimeCount<count && ci.dir!=dir_None);
 }
