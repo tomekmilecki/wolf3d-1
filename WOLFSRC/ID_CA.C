@@ -136,7 +136,8 @@ long GRFILEPOS(int c)
 
 	offset = c*3;
 
-	value = *(long far *)(((byte far *)grstarts)+offset);
+	/* On macOS, long is 8 bytes; use memcpy to read exactly 4 unaligned bytes. */
+	{ int32_t tmp32; memcpy(&tmp32, ((byte *)grstarts)+offset, 4); value = tmp32; }
 
 	value &= 0x00ffffffl;
 
@@ -195,7 +196,8 @@ void CA_CloseDebug (void)
 void CAL_GetGrChunkLength (int chunk)
 {
 	lseek(grhandle,GRFILEPOS(chunk),SEEK_SET);
-	read(grhandle,&chunkexplen,sizeof(chunkexplen));
+	/* chunkexplen is unused; read exactly 4 bytes to advance past the DOS long header. */
+	{ int32_t tmp4; read(grhandle,&tmp4,4); chunkexplen = tmp4; }
 	chunkcomplen = GRFILEPOS(chunk+1)-GRFILEPOS(chunk)-4;
 }
 
@@ -1226,7 +1228,8 @@ void CA_CacheAudioChunk (int chunk)
 		source = bigbufferseg;
 	}
 
-	expanded = *(long far *)source;
+	/* DOS long = 4 bytes; macOS long = 8 bytes — memcpy for unaligned-safe read. */
+	{ int32_t tmp32; memcpy(&tmp32, source, 4); expanded = tmp32; }
 	source += 4;			// skip over length
 	MM_GetPtr ((memptr*)&audiosegs[chunk],expanded);
 	if (mmerror)
@@ -1336,7 +1339,8 @@ void CAL_ExpandGrChunk (int chunk, byte far *source)
 	//
 	// everything else has an explicit size longword
 	//
-		expanded = *(long far *)source;
+		/* DOS long = 4 bytes; macOS long = 8 bytes — memcpy for unaligned-safe read. */
+		{ int32_t tmp32; memcpy(&tmp32, source, 4); expanded = tmp32; }
 		source += 4;			// skip over length
 	}
 
@@ -1447,7 +1451,8 @@ void CA_CacheScreen (int chunk)
 	CA_FarRead(grhandle,bigbufferseg,compressed);
 	source = bigbufferseg;
 
-	expanded = *(long far *)source;
+	/* DOS long = 4 bytes; macOS long = 8 bytes — memcpy for unaligned-safe read. */
+	{ int32_t tmp32; memcpy(&tmp32, source, 4); expanded = tmp32; }
 	source += 4;			// skip over length
 
 //

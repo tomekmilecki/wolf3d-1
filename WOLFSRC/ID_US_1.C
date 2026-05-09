@@ -286,6 +286,36 @@ US_SetPrintRoutines(void (*measure)(char far *,word *,word *),void (*print)(char
 void
 US_Print(char far *s)
 {
+#ifdef __clang__
+	/* macOS fix: string literals are read-only; copy each line to a local buffer. */
+	char	c;
+	char	line[256];
+	int	len;
+	word	w,h;
+
+	while (*s)
+	{
+		len = 0;
+		while ((c = *s) && (c != '\n'))
+		{
+			if (len < 255) line[len++] = c;
+			s++;
+		}
+		line[len] = '\0';
+		USL_MeasureString(line,&w,&h);
+		px = PrintX;
+		py = PrintY;
+		USL_DrawString(line);
+		if (c)
+		{
+			s++;
+			PrintX = WindowX;
+			PrintY += h;
+		}
+		else
+			PrintX += w;
+	}
+#else
 	char	c,far *se;
 	word	w,h;
 
@@ -313,6 +343,7 @@ US_Print(char far *s)
 		else
 			PrintX += w;
 	}
+#endif
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -409,6 +440,25 @@ US_CPrintLine(char far *s)
 void
 US_CPrint(char far *s)
 {
+	/* macOS fix: string literals are read-only; use a local buffer instead
+	   of mutating the input string (original code wrote '\0' into it). */
+#ifdef __clang__
+	char	c;
+	char	line[256];
+	int	len;
+	while (*s)
+	{
+		len = 0;
+		while ((c = *s) && (c != '\n'))
+		{
+			if (len < 255) line[len++] = c;
+			s++;
+		}
+		line[len] = '\0';
+		US_CPrintLine(line);
+		if (c) s++;
+	}
+#else
 	char	c,far *se;
 
 	while (*s)
@@ -427,6 +477,7 @@ US_CPrint(char far *s)
 			s++;
 		}
 	}
+#endif
 }
 
 ///////////////////////////////////////////////////////////////////////////

@@ -33,14 +33,16 @@ typedef	struct
 
 typedef struct
 {
-	int width,height;
+	/* DOS int = 16 bits; use int16_t to match the on-disk binary format. */
+	int16_t width,height;
 } pictabletype;
 
 
 typedef struct
 {
-	int height;
-	int location[256];
+	/* DOS int = 16 bits; use int16_t to match the on-disk binary format. */
+	int16_t height;
+	int16_t location[256];
 	char width[256];
 } fontstruct;
 
