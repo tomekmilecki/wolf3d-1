@@ -99,6 +99,18 @@ void CA_CannotOpen(char *string);
 long		_seg *grstarts;	// array of offsets in egagraph, -1 for sparse
 long		_seg *audiostarts;	// array of offsets in audio / audiot
 
+/* macOS: long is 8 bytes but the on-disk audio starts are 4-byte DOS longs.
+   Read exactly 4 bytes per entry to avoid stride/size mismatch. */
+#ifdef __clang__
+static long AUDIOSTART(int n) {
+    int32_t val;
+    memcpy(&val, (uint8_t *)audiostarts + (size_t)n * 4, 4);
+    return (long)val;
+}
+#else
+#define AUDIOSTART(n) (audiostarts[n])
+#endif
+
 #ifdef GRHEADERLINKED
 huffnode	*grhuffman;
 #else
@@ -1198,8 +1210,8 @@ void CA_CacheAudioChunk (int chunk)
 // load the chunk into a buffer, either the miscbuffer if it fits, or allocate
 // a larger buffer
 //
-	pos = audiostarts[chunk];
-	compressed = audiostarts[chunk+1]-pos;
+	pos = AUDIOSTART(chunk);
+	compressed = AUDIOSTART(chunk+1)-pos;
 
 	lseek(audiohandle,pos,SEEK_SET);
 
