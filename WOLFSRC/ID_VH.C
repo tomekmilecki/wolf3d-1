@@ -80,7 +80,12 @@ asm	mov	ax,ss
 asm	mov	ds,ax
 #else
 			/* Wolf3D macOS port: VGA font draw replaced by no-op (SDL handles display) */
-			(void)step; (void)height;
+			{
+				int row;
+				for (row = 0; row < height; row++)
+					if (source[row * step])
+						VL_Plot(px, py + row, fontcolor);
+			}
 #endif
 
 			source++;
@@ -147,8 +152,16 @@ asm	loop	vertloop
 asm	mov	ax,ss
 asm	mov	ds,ax
 #else
-			/* Wolf3D macOS port: VGA color font draw replaced by no-op (SDL handles display) */
-			(void)step; (void)height;
+			{
+				int row;
+				byte col_color = fontcolor;
+				for (row = 0; row < height; row++) {
+					if (source[row * step])
+						VL_Plot(px, py + row, col_color);
+					if (!(row & 1))
+						col_color++;
+				}
+			}
 #endif
 
 			source++;
