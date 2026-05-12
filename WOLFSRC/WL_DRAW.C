@@ -419,6 +419,9 @@ int	CalcHeight (void)
 */
 
 long		postsource;
+#ifdef __clang__
+void *postsource_base = NULL;
+#endif
 unsigned	postx;
 unsigned	postwidth;
 
@@ -559,7 +562,11 @@ void HitVertWall (void)
 		else
 			wallpic = vertwall[tilehit];
 
+#ifdef __clang__
+		postsource_base = PM_GetPage(wallpic);
+#else
 		*( ((unsigned *)&postsource)+1) = (unsigned)PM_GetPage(wallpic);
+#endif
 		postsource = /* Wolf3D macOS: lvalue cast removed */ texture;
 
 	}
@@ -631,7 +638,11 @@ void HitHorizWall (void)
 		else
 			wallpic = horizwall[tilehit];
 
+#ifdef __clang__
+		postsource_base = PM_GetPage(wallpic);
+#else
 		*( ((unsigned *)&postsource)+1) = (unsigned)PM_GetPage(wallpic);
+#endif
 		postsource = /* Wolf3D macOS: lvalue cast removed */ texture;
 	}
 
@@ -700,7 +711,11 @@ void HitHorizDoor (void)
 			break;
 		}
 
+#ifdef __clang__
+		postsource_base = PM_GetPage(doorpage);
+#else
 		*( ((unsigned *)&postsource)+1) = (unsigned)PM_GetPage(doorpage);
+#endif
 		postsource = /* Wolf3D macOS: lvalue cast removed */ texture;
 	}
 }
@@ -768,7 +783,11 @@ void HitVertDoor (void)
 			break;
 		}
 
+#ifdef __clang__
+		postsource_base = PM_GetPage(doorpage+1);
+#else
 		*( ((unsigned *)&postsource)+1) = (unsigned)PM_GetPage(doorpage+1);
+#endif
 		postsource = /* Wolf3D macOS: lvalue cast removed */ texture;
 	}
 }
@@ -833,7 +852,11 @@ void HitHorizPWall (void)
 
 		wallpic = horizwall[tilehit&63];
 
+#ifdef __clang__
+		postsource_base = PM_GetPage(wallpic);
+#else
 		*( ((unsigned *)&postsource)+1) = (unsigned)PM_GetPage(wallpic);
+#endif
 		postsource = /* Wolf3D macOS: lvalue cast removed */ texture;
 	}
 
@@ -897,7 +920,11 @@ void HitVertPWall (void)
 
 		wallpic = vertwall[tilehit&63];
 
+#ifdef __clang__
+		postsource_base = PM_GetPage(wallpic);
+#else
 		*( ((unsigned *)&postsource)+1) = (unsigned)PM_GetPage(wallpic);
+#endif
 		postsource = /* Wolf3D macOS: lvalue cast removed */ texture;
 	}
 
