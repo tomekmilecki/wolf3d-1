@@ -425,9 +425,26 @@ void *postsource_base = NULL;
 unsigned	postx;
 unsigned	postwidth;
 
-/* Wolf3D macOS port: ScalePost uses x86 VGA asm — stub for Clang */
+/* Wolf3D macOS port: ScalePost uses x86 VGA asm — real implementation for Clang */
 #ifdef __clang__
-void	near ScalePost (void) { /* no-op stub — VGA not available on macOS */ }
+void near ScalePost (void)
+{
+    if (!postsource_base) return;
+    const uint8_t *src_col = (const uint8_t *)postsource_base + (postsource & 0xffffu);
+    uint8_t *base = (uint8_t *)VL_ResolveOffset(bufferofs);
+    int h = wallheight[postx] >> 2;
+    if (h <= 0) return;
+    int top = viewheight / 2 - h / 2;
+    int bot = top + h;
+    int y0 = top < 0 ? 0 : top;
+    int y1 = bot > viewheight ? viewheight : bot;
+    for (int col = (int)postx; col < (int)postx + (int)postwidth && col < viewwidth; col++) {
+        for (int y = y0; y < y1; y++) {
+            int src_row = (y - top) * 64 / h;
+            base[y * SCREENWIDTH + col] = src_col[src_row < 64 ? src_row : 63];
+        }
+    }
+}
 #else
 void	near ScalePost (void)		// VGA version
 {

@@ -1278,3 +1278,7 @@ extern	char	helpfilename[],endfilename[];
 
 extern	void	HelpScreens(void);
 extern	void	EndText(void);
+
+#ifdef __clang__
+extern void *postsource_base;
+#endif
