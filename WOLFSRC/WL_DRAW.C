@@ -1026,7 +1026,16 @@ unsigned vgaCeiling[]=
 
 /* Wolf3D macOS port: VGAClearScreen uses x86 VGA asm — stub for Clang */
 #ifdef __clang__
-void VGAClearScreen (void) { /* no-op stub — VGA rendering replaced by SDL2 */ }
+void VGAClearScreen(void)
+{
+    uint8_t *base = (uint8_t *)VL_ResolveOffset(bufferofs);
+    uint8_t ceiling_color = (uint8_t)(vgaCeiling[gamestate.episode * 10 + mapon] & 0xff);
+    int half = viewheight / 2;
+    for (int y = 0; y < half; y++)
+        memset(base + y * SCREENWIDTH, ceiling_color, (size_t)viewwidth);
+    for (int y = half; y < viewheight; y++)
+        memset(base + y * SCREENWIDTH, 0x19, (size_t)viewwidth);
+}
 #else
 void VGAClearScreen (void)
 {
