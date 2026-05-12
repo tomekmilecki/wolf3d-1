@@ -430,6 +430,7 @@ unsigned	postwidth;
 void near ScalePost (void)
 {
     if (!postsource_base) return;
+    /* low 16 bits = column byte-offset in texture page (max 0xfc0); upper bits are DOS far-ptr artifact */
     const uint8_t *src_col = (const uint8_t *)postsource_base + (postsource & 0xffffu);
     uint8_t *base = (uint8_t *)VL_ResolveOffset(bufferofs);
     int h = wallheight[postx] >> 2;
