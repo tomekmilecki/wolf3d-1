@@ -1029,12 +1029,13 @@ unsigned vgaCeiling[]=
 void VGAClearScreen(void)
 {
     uint8_t *base = (uint8_t *)VL_ResolveOffset(bufferofs);
+    /* vgaCeiling stores the index duplicated as a 16-bit word (DOS mode-X artifact); low byte is the palette index */
     uint8_t ceiling_color = (uint8_t)(vgaCeiling[gamestate.episode * 10 + mapon] & 0xff);
     int half = viewheight / 2;
     for (int y = 0; y < half; y++)
         memset(base + y * SCREENWIDTH, ceiling_color, (size_t)viewwidth);
     for (int y = half; y < viewheight; y++)
-        memset(base + y * SCREENWIDTH, 0x19, (size_t)viewwidth);
+        memset(base + y * SCREENWIDTH, 0x19, (size_t)viewwidth); /* 0x19 = floor color, matches 0x1919 in original DOS asm */
 }
 #else
 void VGAClearScreen (void)
