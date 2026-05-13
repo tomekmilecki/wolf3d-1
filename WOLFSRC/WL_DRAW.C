@@ -138,12 +138,20 @@ void AsmRefresh (void);			// in WL_DR_A.ASM
 
 #pragma warn -rvl			// I stick the return value in with ASMs
 
-/* Wolf3D macOS port: FixedByFrac uses x86 asm; provide C implementation */
+/* Wolf3D macOS port: FixedByFrac uses x86 asm; provide C implementation.
+   Wolf3D trig tables (sintable/costable) use sign-magnitude encoding:
+   bit 31 = sign, bits 0..15 = magnitude (0..65535).
+   The DOS asm extracts the sign and magnitude separately — we replicate that. */
 #ifdef __clang__
 fixed FixedByFrac (fixed a, fixed b)
 {
-    /* Correct C implementation of 16.16 fixed-point multiply */
-    return (fixed)(((int64_t)a * (int64_t)b) >> 16);
+    unsigned mag_b = (unsigned)b & 0xffffu;   /* magnitude of b (low 16 bits) */
+    int sign = (int)((unsigned)b >> 31);       /* sign bit of b */
+    uint32_t mag_a;
+    if (a < 0) { mag_a = (uint32_t)(-a); sign ^= 1; }
+    else        { mag_a = (uint32_t)a; }
+    uint32_t result = (uint32_t)(((uint64_t)mag_a * (uint64_t)mag_b) >> 16);
+    return sign ? -(fixed)result : (fixed)result;
 }
 #else
 fixed FixedByFrac (fixed a, fixed b)

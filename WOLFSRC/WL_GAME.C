@@ -222,7 +222,11 @@ void ScanInfoPlane (void)
 {
 	unsigned	x,y,i,j;
 	int			tile;
+#ifdef __clang__
+	uint16_t *start;
+#else
 	unsigned	far	*start;
+#endif
 
 	start = mapsegs[1];
 	for (y=0;y<mapheight;y++)
@@ -625,7 +629,11 @@ void ScanInfoPlane (void)
 void SetupGameLevel (void)
 {
 	int	x,y,i;
+#ifdef __clang__
+	uint16_t *map; unsigned tile,spot;
+#else
 	unsigned	far *map,tile,spot;
+#endif
 
 
 	if (!loadedgame)
@@ -734,7 +742,7 @@ void SetupGameLevel (void)
 			if (tile == AMBUSHTILE)
 			{
 				tilemap[x][y] = 0;
-				if ( (unsigned)actorat[x][y] == AMBUSHTILE)
+				if ( (uintptr_t)actorat[x][y] == AMBUSHTILE)
 					actorat[x][y] = NULL;
 
 				if (*map >= AREATILE)
@@ -854,6 +862,7 @@ void DrawPlayBorder (void)
 	VWB_Vlin (yl-1,yl+viewheight,xl+viewwidth,125);
 	VWB_Plot (xl-1,yl+viewheight,124);
 }
+
 
 
 
@@ -1487,4 +1496,3 @@ startplayloop:
 	} while (1);
 
 }
-
