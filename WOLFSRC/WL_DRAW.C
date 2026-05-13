@@ -442,7 +442,7 @@ void near ScalePost (void)
     for (int col = (int)postx; col < (int)postx + (int)postwidth && col < viewwidth; col++) {
         for (int y = y0; y < y1; y++) {
             int src_row = (y - top) * 64 / h;
-            base[y * SCREENWIDTH + col] = src_col[src_row < 64 ? src_row : 63];
+            base[y * (SCREENBWIDE * 4) + col] = src_col[src_row < 64 ? src_row : 63];
         }
     }
 }
@@ -1051,9 +1051,9 @@ void VGAClearScreen(void)
     uint8_t ceiling_color = (uint8_t)(vgaCeiling[gamestate.episode * 10 + mapon] & 0xff);
     int half = viewheight / 2;
     for (int y = 0; y < half; y++)
-        memset(base + y * SCREENWIDTH, ceiling_color, (size_t)viewwidth);
+        memset(base + y * (SCREENBWIDE * 4), ceiling_color, (size_t)viewwidth);
     for (int y = half; y < viewheight; y++)
-        memset(base + y * SCREENWIDTH, 0x19, (size_t)viewwidth); /* 0x19 = floor color, matches 0x1919 in original DOS asm */
+        memset(base + y * (SCREENBWIDE * 4), 0x19, (size_t)viewwidth); /* 0x19 = floor color, matches 0x1919 in original DOS asm */
 }
 #else
 void VGAClearScreen (void)
@@ -1478,6 +1478,10 @@ asm	rep stosw
 	bufferofs -= screenofs;
 	displayofs = bufferofs;
 
+#ifdef __clang__
+	VL_FlushScreen ();
+#endif
+
 #ifndef __clang__
 	asm	cli
 	asm	mov	cx,[displayofs]
@@ -1500,4 +1504,3 @@ asm	rep stosw
 
 
 //===========================================================================
-
