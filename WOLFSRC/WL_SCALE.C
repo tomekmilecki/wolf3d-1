@@ -220,7 +220,11 @@ unsigned BuildCompScale (int height, memptr *finalspot)
 //
 	*code++ = 0xcb;
 
+#ifdef __clang__
+	totalsize = sizeof(t_compscale);
+#else
 	totalsize = FP_OFF(code);
+#endif
 	MM_GetPtr (finalspot,totalsize);
 	_fmemcpy ((byte _seg *)(*finalspot),(byte _seg *)work,totalsize);
 
@@ -253,6 +257,18 @@ static int clang_scaled_height;
 static uint16_t *ClangShapeCommands(t_compshape _seg *shape, uint16_t offset)
 {
 	return (uint16_t *)((byte *)shape + offset);
+}
+
+static boolean ClangValidSpriteNumber(int shapenum)
+{
+	return shapenum >= 0 && PMSpriteStart + shapenum < PMSoundStart;
+}
+
+static boolean ClangValidShapeHeader(t_compshape _seg *shape)
+{
+	return shape
+		&& shape->leftpix <= shape->rightpix
+		&& shape->rightpix < 64;
 }
 
 static void ClangDrawScaledColumn(void)
@@ -503,8 +519,15 @@ void ScaleShape (int xcenter, int shapenum, unsigned height)
 #endif
 	boolean		leftvis,rightvis;
 
-
+#ifdef __clang__
+	if (!ClangValidSpriteNumber(shapenum))
+		return;
+#endif
 	shape = PM_GetSpritePage (shapenum);
+#ifdef __clang__
+	if (!ClangValidShapeHeader(shape))
+		return;
+#endif
 
 	scale = height>>3;						// low three bits are fractional
 	if (!scale || scale>maxscale)
@@ -559,6 +582,13 @@ void ScaleShape (int xcenter, int shapenum, unsigned height)
 			slinewidth = viewwidth-slinex;
 			if (slinewidth<1)
 				continue;		// still off the right side
+			if (slinex<0)
+			{
+				slinewidth += slinex;	// trim left overflow
+				slinex = 0;
+				if (slinewidth<1)
+					continue;
+			}
 		}
 		else
 		{
@@ -645,6 +675,8 @@ void ScaleShape (int xcenter, int shapenum, unsigned height)
 
 			slinewidth += slinex;
 			slinex = 0;
+			if (slinewidth > viewwidth)	// also clip right overflow
+				slinewidth = viewwidth;
 		}
 		else
 		{
@@ -727,8 +759,15 @@ void SimpleScaleShape (int xcenter, int shapenum, unsigned height)
 #endif
 	boolean		leftvis,rightvis;
 
-
+#ifdef __clang__
+	if (!ClangValidSpriteNumber(shapenum))
+		return;
+#endif
 	shape = PM_GetSpritePage (shapenum);
+#ifdef __clang__
+	if (!ClangValidShapeHeader(shape))
+		return;
+#endif
 
 	scale = height>>1;
 	if (!scale || scale>maxscale)
