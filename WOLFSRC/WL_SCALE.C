@@ -493,7 +493,8 @@ void ScaleShape (int xcenter, int shapenum, unsigned height)
 {
 	t_compshape	_seg *shape;
 	t_compscale _seg *comptable;
-	unsigned	scale,srcx,stopx,tempx;
+	unsigned	scale,tempx;
+	int			srcx,stopx;
 	int			t;
 #ifdef __clang__
 	uint16_t	far *cmdptr;
@@ -716,7 +717,8 @@ void SimpleScaleShape (int xcenter, int shapenum, unsigned height)
 {
 	t_compshape	_seg *shape;
 	t_compscale _seg *comptable;
-	unsigned	scale,srcx,stopx,tempx;
+	unsigned	scale,tempx;
+	int			srcx,stopx;
 	int			t;
 #ifdef __clang__
 	uint16_t	far *cmdptr;

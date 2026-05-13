@@ -258,12 +258,23 @@ int songs[]=
 ===================
 */
 
+#ifdef __clang__
+static boolean KeyboardScanDown (int scan)
+{
+	return scan > 0 && scan < NumCodes && Keyboard[scan];
+}
+#endif
+
 void PollKeyboardButtons (void)
 {
 	int		i;
 
 	for (i=0;i<NUMBUTTONS;i++)
+#ifdef __clang__
+		if (KeyboardScanDown (buttonscan[i]))
+#else
 		if (Keyboard[buttonscan[i]])
+#endif
 			buttonstate[i] = true;
 }
 
@@ -338,10 +349,27 @@ void PollJoystickButtons (void)
 ===================
 */
 
+#ifdef __clang__
+static boolean KeyboardMoveDown (int dir, int fallback)
+{
+	return KeyboardScanDown (dirscan[dir]) || KeyboardScanDown (fallback);
+}
+#endif
+
 void PollKeyboardMove (void)
 {
 	if (buttonstate[bt_run])
 	{
+#ifdef __clang__
+		if (KeyboardMoveDown (di_north, sc_W))
+			controly -= RUNMOVE*tics;
+		if (KeyboardMoveDown (di_south, sc_S))
+			controly += RUNMOVE*tics;
+		if (KeyboardMoveDown (di_west, sc_A))
+			controlx -= RUNMOVE*tics;
+		if (KeyboardMoveDown (di_east, sc_D))
+			controlx += RUNMOVE*tics;
+#else
 		if (Keyboard[dirscan[di_north]])
 			controly -= RUNMOVE*tics;
 		if (Keyboard[dirscan[di_south]])
@@ -350,9 +378,20 @@ void PollKeyboardMove (void)
 			controlx -= RUNMOVE*tics;
 		if (Keyboard[dirscan[di_east]])
 			controlx += RUNMOVE*tics;
+#endif
 	}
 	else
 	{
+#ifdef __clang__
+		if (KeyboardMoveDown (di_north, sc_W))
+			controly -= BASEMOVE*tics;
+		if (KeyboardMoveDown (di_south, sc_S))
+			controly += BASEMOVE*tics;
+		if (KeyboardMoveDown (di_west, sc_A))
+			controlx -= BASEMOVE*tics;
+		if (KeyboardMoveDown (di_east, sc_D))
+			controlx += BASEMOVE*tics;
+#else
 		if (Keyboard[dirscan[di_north]])
 			controly -= BASEMOVE*tics;
 		if (Keyboard[dirscan[di_south]])
@@ -361,6 +400,7 @@ void PollKeyboardMove (void)
 			controlx -= BASEMOVE*tics;
 		if (Keyboard[dirscan[di_east]])
 			controlx += BASEMOVE*tics;
+#endif
 	}
 }
 
@@ -456,6 +496,10 @@ void PollControls (void)
 {
 	int		max,min,i;
 	byte	buttonbits;
+
+#ifdef __clang__
+	IN_PumpEvents ();
+#endif
 
 //
 // get timing info for last frame
@@ -1477,4 +1521,3 @@ void PlayLoop (void)
 	if (playstate != ex_died)
 		FinishPaletteShifts ();
 }
-

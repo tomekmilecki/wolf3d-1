@@ -93,9 +93,33 @@ void ReadConfig(void)
 	SDMode          sd;
 	SMMode          sm;
 	SDSMode         sds;
+#ifdef __clang__
+	size_t          configsize;
+#endif
 
 
-	if ( (file = open(configname,O_BINARY | O_RDONLY)) != -1)
+	file = open(configname,O_BINARY | O_RDONLY);
+#ifdef __clang__
+	if (file != -1)
+	{
+		struct stat st;
+		configsize = sizeof(HighScore) * MaxScores
+			+ sizeof(sd) + sizeof(sm) + sizeof(sds)
+			+ sizeof(mouseenabled) + sizeof(joystickenabled)
+			+ sizeof(joypadenabled) + sizeof(joystickprogressive)
+			+ sizeof(joystickport)
+			+ sizeof(dirscan) + sizeof(buttonscan)
+			+ sizeof(buttonmouse) + sizeof(buttonjoy)
+			+ sizeof(viewsize) + sizeof(mouseadjustment);
+		if (fstat(file, &st) == -1 || (size_t)st.st_size < configsize)
+		{
+			close(file);
+			file = -1;
+		}
+	}
+#endif
+
+	if (file != -1)
 	{
 	//
 	// valid config file
@@ -1612,4 +1636,3 @@ void main (void)
 
 	Quit("Demo loop exited???");
 }
-
