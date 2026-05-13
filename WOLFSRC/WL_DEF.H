@@ -1073,12 +1073,21 @@ typedef struct
 	byte		code[];
 }	t_compscale;
 
+#ifdef __clang__
+typedef struct __attribute__((packed))
+{
+	uint16_t	leftpix,rightpix;
+	uint16_t	dataofs[64];
+// table data after dataofs[rightpix-leftpix+1]
+}	t_compshape;
+#else
 typedef struct
 {
 	unsigned	leftpix,rightpix;
 	unsigned	dataofs[64];
 // table data after dataofs[rightpix-leftpix+1]
 }	t_compshape;
+#endif
 
 
 extern	t_compscale _seg *scaledirectory[MAXSCALEHEIGHT+1];

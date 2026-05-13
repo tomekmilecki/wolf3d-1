@@ -32,16 +32,30 @@ loaded into the data segment
 
 typedef struct
 {
+#ifdef __clang__
+  /* DOS unsigned = 16 bits; match on-disk size so sizeof(grhuffman) reads correctly. */
+  uint16_t bit0, bit1;
+#else
   unsigned bit0,bit1;	// 0-255 is a character, > is a pointer to a node
+#endif
 } huffnode;
 
 
+#ifdef __clang__
+typedef struct __attribute__((packed))
+{
+	uint16_t	RLEWtag;
+	int32_t		headeroffsets[100];
+	byte		tileinfo[];
+} mapfiletype;
+#else
 typedef struct
 {
 	unsigned	RLEWtag;
 	long		headeroffsets[100];
 	byte		tileinfo[];
 } mapfiletype;
+#endif
 
 
 /*
@@ -145,13 +159,12 @@ long GRFILEPOS(int c)
 {
 	long value;
 	int	offset;
+	byte	*pos;
 
 	offset = c*3;
+	pos = ((byte *)grstarts)+offset;
 
-	/* On macOS, long is 8 bytes; use memcpy to read exactly 4 unaligned bytes. */
-	{ int32_t tmp32; memcpy(&tmp32, ((byte *)grstarts)+offset, 4); value = tmp32; }
-
-	value &= 0x00ffffffl;
+	value = ((long)pos[0]) | ((long)pos[1] << 8) | ((long)pos[2] << 16);
 
 	if (value == 0xffffffl)
 		value = -1;
@@ -414,6 +427,9 @@ boolean CA_LoadFile (char *filename, memptr *ptr)
 
 void CAL_OptimizeNodes (huffnode *table)
 {
+#ifndef __clang__
+  /* macOS port: skip pointer-packing optimisation — CAL_HuffExpand uses raw
+     0-255=leaf / 256+index scheme, which doesn't need pre-converted pointers. */
   huffnode *node;
   int i;
 
@@ -427,6 +443,9 @@ void CAL_OptimizeNodes (huffnode *table)
 	  node->bit1 = (unsigned)(table+(node->bit1-256));
 	node++;
   }
+#else
+  (void)table;
+#endif
 }
 
 
@@ -453,8 +472,16 @@ void CAL_HuffExpand (byte huge *source, byte huge *dest,
   byte      curbyte = 0;
   unsigned  bitpos  = 8;   /* start exhausted so first test triggers reload */
   long      written = 0;
+  byte      *out = dest;
+  byte      *plane_data = NULL;
 
-  (void)screenhack; /* screenhack (VGA plane writes) is a no-op on macOS */
+  if (screenhack)
+  {
+	plane_data = malloc((size_t)length);
+	if (!plane_data)
+		Quit("CAL_HuffExpand: out of memory");
+	out = plane_data;
+  }
 
   while (written < length)
   {
@@ -469,13 +496,29 @@ void CAL_HuffExpand (byte huge *source, byte huge *dest,
       if (code < 256)
       {
         /* leaf node — emit byte */
-        *dest++ = (byte)code;
+        *out++ = (byte)code;
         written++;
         break;
       }
       /* internal node: code is the huffnode index (stored as 256 + index) */
       nodeon = hufftable + (code - 256);
     }
+  }
+
+  if (screenhack)
+  {
+	long plane_len = length / 4;
+	for (int plane = 0; plane < 4; plane++)
+	{
+		byte *src = plane_data + plane * plane_len;
+		for (long i = 0; i < plane_len; i++)
+		{
+			long row = i / 80;
+			long byte_x = i % 80;
+			dest[row * 320 + byte_x * 4 + plane] = src[i];
+		}
+	}
+	free(plane_data);
   }
 #else
 //  unsigned bit,byte,node,code;
@@ -668,12 +711,73 @@ asm	mov	ds,ax
 
 void CAL_CarmackExpand (unsigned far *source, unsigned far *dest, unsigned length)
 {
+#ifdef __clang__
+	uint16_t	ch;
+	unsigned	chhigh,count,offset;
+	uint16_t	*copyptr, *inptr, *outptr, *baseptr;
+	unsigned char *bptr;
+
+	length/=2;
+
+	inptr = (uint16_t *)source;
+	outptr = (uint16_t *)dest;
+	baseptr = outptr;
+
+	while (length)
+	{
+		ch = *inptr++;
+		chhigh = ch>>8;
+		if (chhigh == NEARTAG)
+		{
+			count = ch&0xff;
+			if (!count)
+			{				// have to insert a word containing the tag byte
+				bptr = (unsigned char *)inptr;
+				ch |= *bptr;
+				inptr = (uint16_t *)(bptr + 1);
+				*outptr++ = ch;
+				length--;
+			}
+			else
+			{
+				bptr = (unsigned char *)inptr;
+				offset = *bptr;
+				inptr = (uint16_t *)(bptr + 1);
+				copyptr = outptr - offset;
+				length -= count;
+				while (count--)
+					*outptr++ = *copyptr++;
+			}
+		}
+		else if (chhigh == FARTAG)
+		{
+			count = ch&0xff;
+			if (!count)
+			{				// have to insert a word containing the tag byte
+				bptr = (unsigned char *)inptr;
+				ch |= *bptr;
+				inptr = (uint16_t *)(bptr + 1);
+				*outptr++ = ch;
+				length --;
+			}
+			else
+			{
+				offset = *inptr++;
+				copyptr = baseptr + offset;
+				length -= count;
+				while (count--)
+					*outptr++ = *copyptr++;
+			}
+		}
+		else
+		{
+			*outptr++ = ch;
+			length --;
+		}
+	}
+#else
 	unsigned	ch,chhigh,count,offset;
 	unsigned	far *copyptr, far *inptr, far *outptr;
-#ifdef __clang__
-	/* Wolf3D macOS port: byte-pointer helper to avoid lvalue-cast increment */
-	unsigned char *bptr;
-#endif
 
 	length/=2;
 
@@ -689,21 +793,13 @@ void CAL_CarmackExpand (unsigned far *source, unsigned far *dest, unsigned lengt
 			count = ch&0xff;
 			if (!count)
 			{				// have to insert a word containing the tag byte
-#ifdef __clang__
-				bptr = (unsigned char *)inptr; ch |= *bptr; inptr = (unsigned far *)(bptr + 1);
-#else
 				ch |= *((unsigned char far *)inptr)++;
-#endif
 				*outptr++ = ch;
 				length--;
 			}
 			else
 			{
-#ifdef __clang__
-				bptr = (unsigned char *)inptr; offset = *bptr; inptr = (unsigned far *)(bptr + 1);
-#else
 				offset = *((unsigned char far *)inptr)++;
-#endif
 				copyptr = outptr - offset;
 				length -= count;
 				while (count--)
@@ -715,11 +811,7 @@ void CAL_CarmackExpand (unsigned far *source, unsigned far *dest, unsigned lengt
 			count = ch&0xff;
 			if (!count)
 			{				// have to insert a word containing the tag byte
-#ifdef __clang__
-				bptr = (unsigned char *)inptr; ch |= *bptr; inptr = (unsigned far *)(bptr + 1);
-#else
 				ch |= *((unsigned char far *)inptr)++;
-#endif
 				*outptr++ = ch;
 				length --;
 			}
@@ -738,6 +830,7 @@ void CAL_CarmackExpand (unsigned far *source, unsigned far *dest, unsigned lengt
 			length --;
 		}
 	}
+#endif
 }
 
 
@@ -812,23 +905,25 @@ void CA_RLEWexpand (unsigned huge *source, unsigned huge *dest,long length,
 {
 #ifdef __clang__
   /* Wolf3D macOS port: C replacement for Borland asm RLEW decompressor */
-  unsigned value, count, i;
-  unsigned huge *end;
+  uint16_t value, count, i;
+  uint16_t *src, *dst, *end;
 
-  end = dest + (length) / 2;
+  src = (uint16_t *)source;
+  dst = (uint16_t *)dest;
+  end = dst + (length) / 2;
   do
   {
-    value = *source++;
+    value = *src++;
     if (value != rlewtag)
-      *dest++ = value;
+      *dst++ = value;
     else
     {
-      count = *source++;
-      value = *source++;
+      count = *src++;
+      value = *src++;
       for (i = 1; i <= count; i++)
-        *dest++ = value;
+        *dst++ = value;
     }
-  } while (dest < end);
+  } while (dst < end);
 #else
 //  unsigned value,count,i;
   unsigned huge *end;
@@ -1532,20 +1627,36 @@ void CA_CacheMap (int mapnum)
 		// The resulting RLEW chunk also does, even though it's not really
 		// needed
 		//
+#ifdef __clang__
+		{
+		uint16_t *wordsource = (uint16_t *)source;
+		expanded = *wordsource++;
+		MM_GetPtr (&buffer2seg,expanded);
+		CAL_CarmackExpand ((unsigned far *)wordsource, (unsigned far *)buffer2seg,expanded);
+		CA_RLEWexpand ((unsigned far *)(((uint16_t *)buffer2seg)+1),*dest,size,
+		((mapfiletype _seg *)tinf)->RLEWtag);
+		}
+#else
 		expanded = *source;
 		source++;
 		MM_GetPtr (&buffer2seg,expanded);
 		CAL_CarmackExpand (source, (unsigned far *)buffer2seg,expanded);
 		CA_RLEWexpand (((unsigned far *)buffer2seg)+1,*dest,size,
 		((mapfiletype _seg *)tinf)->RLEWtag);
+#endif
 		MM_FreePtr (&buffer2seg);
 
 #else
 		//
 		// unRLEW, skipping expanded length
 		//
+#ifdef __clang__
+		CA_RLEWexpand ((unsigned far *)(((uint16_t *)source)+1), *dest,size,
+		((mapfiletype _seg *)tinf)->RLEWtag);
+#else
 		CA_RLEWexpand (source+1, *dest,size,
 		((mapfiletype _seg *)tinf)->RLEWtag);
+#endif
 #endif
 
 		if (compressed>BUFFERSIZE)

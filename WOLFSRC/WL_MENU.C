@@ -3212,6 +3212,10 @@ int HandleMenu(CP_iteminfo *item_i,CP_itemtype far *items,void (*routine)(int w)
 						break;
 					}
 			}
+#ifdef __clang__
+			/* macOS: clear unmatched char so it doesn't re-fire every frame */
+			LastASCII = 0;
+#endif
 		}
 
 		//

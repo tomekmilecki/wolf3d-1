@@ -246,6 +246,71 @@ extern	unsigned	maskword;
 byte	mask1,mask2,mask3;
 
 
+#ifdef __clang__
+static t_compshape _seg *clang_shape;
+static int clang_scaled_height;
+
+static uint16_t *ClangShapeCommands(t_compshape _seg *shape, uint16_t offset)
+{
+	return (uint16_t *)((byte *)shape + offset);
+}
+
+static void ClangDrawScaledColumn(void)
+{
+	uint16_t *cmd;
+	int toppix;
+
+	if (!clang_shape || !linecmds || clang_scaled_height <= 0 || slinex >= viewwidth)
+		return;
+
+	cmd = (uint16_t *)linecmds;
+	toppix = (viewheight - clang_scaled_height) / 2;
+
+	while (cmd[0])
+	{
+		int endpix = cmd[0] >> 1;
+		int source = cmd[1];
+		int startpix = cmd[2] >> 1;
+		byte *sourcebase = ((byte *)clang_shape) + source;
+
+		cmd += 3;
+
+		if (startpix < 0)
+			startpix = 0;
+		if (endpix > 64)
+			endpix = 64;
+
+		for (int srcy = startpix; srcy < endpix; srcy++)
+		{
+			byte color = sourcebase[srcy];
+			int y0 = toppix + (int)(((long)srcy * clang_scaled_height) >> 6);
+			int y1 = toppix + (int)(((long)(srcy + 1) * clang_scaled_height) >> 6);
+
+			if (y1 <= 0 || y0 >= viewheight)
+				continue;
+			if (y0 < 0)
+				y0 = 0;
+			if (y1 > viewheight)
+				y1 = viewheight;
+			if (y1 <= y0)
+				y1 = y0 + 1;
+			if (y1 > viewheight)
+				y1 = viewheight;
+
+			for (int x = 0; x < slinewidth; x++)
+			{
+				int screenx = slinex + x;
+				if ((unsigned)screenx >= (unsigned)viewwidth)
+					continue;
+				for (int y = y0; y < y1; y++)
+					VL_Plot(screenx, y, color);
+			}
+		}
+	}
+}
+#endif
+
+
 /* Wolf3D macOS port: ScaleLine uses x86 Borland asm — stub for Clang */
 #ifndef __clang__
 void near ScaleLine (void)
@@ -395,8 +460,8 @@ asm	jmp	scaletriple					// do the next segment
 
 }
 #else
-/* Wolf3D macOS port: ScaleLine stub — x86 VGA asm not available on macOS */
-void near ScaleLine (void) { /* no-op stub */ }
+/* Wolf3D macOS port: native replacement for the generated x86 VGA scaler. */
+void near ScaleLine (void) { ClangDrawScaledColumn(); }
 #endif /* !__clang__ */
 
 
@@ -430,7 +495,11 @@ void ScaleShape (int xcenter, int shapenum, unsigned height)
 	t_compscale _seg *comptable;
 	unsigned	scale,srcx,stopx,tempx;
 	int			t;
+#ifdef __clang__
+	uint16_t	far *cmdptr;
+#else
 	unsigned	far *cmdptr;
+#endif
 	boolean		leftvis,rightvis;
 
 
@@ -441,8 +510,13 @@ void ScaleShape (int xcenter, int shapenum, unsigned height)
 		return;								// too close or far away
 	comptable = scaledirectory[scale];
 
+#ifdef __clang__
+	clang_shape = shape;
+	clang_scaled_height = scale * 2;
+#else
 	*(((unsigned *)&linescale)+1)=(unsigned)comptable;	// seg of far call
 	*(((unsigned *)&linecmds)+1)=(unsigned)shape;		// seg of shape
+#endif
 
 //
 // scale to the left (from pixel 31 to shape->leftpix)
@@ -455,7 +529,11 @@ void ScaleShape (int xcenter, int shapenum, unsigned height)
 	while ( --srcx >=stopx && slinex>0)
 	{
 		/* Wolf3D macOS port: lvalue cast; linecmds is unsigned* */
+#ifdef __clang__
+		linecmds = (unsigned *)ClangShapeCommands(shape, *cmdptr--);
+#else
 		linecmds = (unsigned*)(uintptr_t)(*cmdptr--);
+#endif
 		if ( !(slinewidth = comptable->width[srcx]) )
 			continue;
 
@@ -539,7 +617,11 @@ void ScaleShape (int xcenter, int shapenum, unsigned height)
 	while ( ++srcx <= stopx && (slinex+=slinewidth)<viewwidth)
 	{
 		/* Wolf3D macOS port: lvalue cast; linecmds is unsigned* */
+#ifdef __clang__
+		linecmds = (unsigned *)ClangShapeCommands(shape, *cmdptr++);
+#else
 		linecmds = (unsigned*)(uintptr_t)(*cmdptr++);
+#endif
 		if ( !(slinewidth = comptable->width[srcx]) )
 			continue;
 
@@ -636,17 +718,28 @@ void SimpleScaleShape (int xcenter, int shapenum, unsigned height)
 	t_compscale _seg *comptable;
 	unsigned	scale,srcx,stopx,tempx;
 	int			t;
+#ifdef __clang__
+	uint16_t	far *cmdptr;
+#else
 	unsigned	far *cmdptr;
+#endif
 	boolean		leftvis,rightvis;
 
 
 	shape = PM_GetSpritePage (shapenum);
 
 	scale = height>>1;
+	if (!scale || scale>maxscale)
+		return;
 	comptable = scaledirectory[scale];
 
+#ifdef __clang__
+	clang_shape = shape;
+	clang_scaled_height = scale * 2;
+#else
 	*(((unsigned *)&linescale)+1)=(unsigned)comptable;	// seg of far call
 	*(((unsigned *)&linecmds)+1)=(unsigned)shape;		// seg of shape
+#endif
 
 //
 // scale to the left (from pixel 31 to shape->leftpix)
@@ -659,7 +752,11 @@ void SimpleScaleShape (int xcenter, int shapenum, unsigned height)
 	while ( --srcx >=stopx )
 	{
 		/* Wolf3D macOS port: lvalue cast; linecmds is unsigned* */
+#ifdef __clang__
+		linecmds = (unsigned *)ClangShapeCommands(shape, *cmdptr--);
+#else
 		linecmds = (unsigned*)(uintptr_t)(*cmdptr--);
+#endif
 		if ( !(slinewidth = comptable->width[srcx]) )
 			continue;
 
@@ -688,7 +785,11 @@ void SimpleScaleShape (int xcenter, int shapenum, unsigned height)
 	while ( ++srcx <= stopx )
 	{
 		/* Wolf3D macOS port: lvalue cast; linecmds is unsigned* */
+#ifdef __clang__
+		linecmds = (unsigned *)ClangShapeCommands(shape, *cmdptr++);
+#else
 		linecmds = (unsigned*)(uintptr_t)(*cmdptr++);
+#endif
 		if ( !(slinewidth = comptable->width[srcx]) )
 			continue;
 
@@ -740,4 +841,3 @@ int			slinex,slinewidth;
 unsigned	far *linecmds;
 long		linescale;
 unsigned	maskword;
-

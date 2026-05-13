@@ -45,6 +45,9 @@ void VW_DrawPropString (char far *string)
 	byte	ch,mask;
 
 	font = (fontstruct far *)grsegs[STARTFONT+fontnumber];
+#ifdef __clang__
+	if (!font) { fprintf(stderr, "[wolf3d] VW_DrawPropString: NULL font! fontnumber=%d\n", fontnumber); return; }
+#endif
 	height = bufferheight = font->height;
 	dest = origdest = MK_FP(SCREENSEG,bufferofs+ylookup[py]+(px>>2));
 	mask = 1<<(px&3);
@@ -565,8 +568,13 @@ noxor:
 			asm add	di,[pagedelta]
 			asm	mov	[es:di],al
 #else
-			/* Wolf3D macOS port: VGA pixel copy — no-op (SDL renderer handles display) */
-			(void)drawofs; (void)pagedelta;
+				{
+					byte *src = (byte *)VL_ResolveOffset(drawofs);
+					byte *dst = (byte *)VL_ResolveOffset(drawofs + pagedelta);
+					src += mask;
+					dst += mask;
+					*dst = *src;
+				}
 #endif
 
 			if (rndval == 1)		// entire sequence has been completed

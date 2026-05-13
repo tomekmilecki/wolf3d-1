@@ -153,10 +153,14 @@ void NewState (objtype *ob, statetype *state)
 
 #define CHECKDIAG(x,y)								\
 {                                                   \
-	temp=(unsigned)actorat[x][y];                   \
+	if ((unsigned)(x)>=MAPSIZE || (unsigned)(y)>=MAPSIZE)\
+		return false;                           \
+	temp=(uintptr_t)actorat[x][y];                  \
 	if (temp)                                       \
 	{                                               \
 		if (temp<256)                               \
+			return false;                           \
+		if (temp<(uintptr_t)objlist || temp>=(uintptr_t)lastobj)\
 			return false;                           \
 		if (((objtype *)temp)->flags&FL_SHOOTABLE)  \
 			return false;                           \
@@ -165,13 +169,17 @@ void NewState (objtype *ob, statetype *state)
 
 #define CHECKSIDE(x,y)								\
 {                                                   \
-	temp=(unsigned)actorat[x][y];                   \
+	if ((unsigned)(x)>=MAPSIZE || (unsigned)(y)>=MAPSIZE)\
+		return false;                           \
+	temp=(uintptr_t)actorat[x][y];                  \
 	if (temp)                                       \
 	{                                               \
 		if (temp<128)                               \
 			return false;                           \
 		if (temp<256)                               \
 			doornum = temp&63;                      \
+		else if (temp<(uintptr_t)objlist || temp>=(uintptr_t)lastobj)\
+			return false;                           \
 		else if (((objtype *)temp)->flags&FL_SHOOTABLE)\
 			return false;                           \
 	}                                               \
@@ -181,9 +189,12 @@ void NewState (objtype *ob, statetype *state)
 boolean TryWalk (objtype *ob)
 {
 	int			doornum;
-	unsigned	temp;
+	int			oldtilex,oldtiley;
+	uintptr_t	temp;
 
 	doornum = -1;
+	oldtilex = ob->tilex;
+	oldtiley = ob->tiley;
 
 	if (ob->obclass == inertobj)
 	{
@@ -315,6 +326,13 @@ boolean TryWalk (objtype *ob)
 		default:
 			Quit ("Walk: Bad dir");
 		}
+
+	if ((unsigned)ob->tilex >= MAPSIZE || (unsigned)ob->tiley >= MAPSIZE)
+	{
+		ob->tilex = oldtilex;
+		ob->tiley = oldtiley;
+		return false;
+	}
 
 	if (doornum != -1)
 	{
@@ -1168,6 +1186,8 @@ boolean CheckLine (objtype *ob)
 
 
 
+
+
 /*
 ================
 =
@@ -1476,5 +1496,3 @@ boolean SightPlayer (objtype *ob)
 
 	return true;
 }
-
-

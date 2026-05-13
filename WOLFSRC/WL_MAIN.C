@@ -764,7 +764,6 @@ void SignonScreen (void)                        // VGA version
 
 void FinishSignon (void)
 {
-
 #ifndef SPEAR
 	VW_Bar (0,189,300,11,peekb(0xa000,0));
 	WindowX = 0;

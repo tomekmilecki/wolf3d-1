@@ -8,6 +8,15 @@
 
 //===========================================================================
 
+#ifdef __clang__
+typedef	struct __attribute__((packed))
+{
+	int32_t		planestart[3];
+	uint16_t	planelength[3];
+	uint16_t	width,height;
+	char		name[16];
+} maptype;
+#else
 typedef	struct
 {
 	long		planestart[3];
@@ -15,6 +24,7 @@ typedef	struct
 	unsigned	width,height;
 	char		name[16];
 } maptype;
+#endif
 
 //===========================================================================
 
