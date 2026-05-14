@@ -214,6 +214,40 @@ void ControlMovement (objtype *ob)
 		Thrust (angle,controly*BACKMOVESCALE);		// move backwards
 	}
 
+//
+// A/D keyboard strafe (always lateral, no modifier key needed)
+//
+	if (control_strafe > 0)
+	{
+		angle = ob->angle - ANGLES/4;
+		if (angle < 0)
+			angle += ANGLES;
+		Thrust (angle, control_strafe * MOVESCALE);
+	}
+	else if (control_strafe < 0)
+	{
+		angle = ob->angle + ANGLES/4;
+		if (angle >= ANGLES)
+			angle -= ANGLES;
+		Thrust (angle, -control_strafe * MOVESCALE);
+	}
+
+//
+// Mouse X turning (always direct angle change, sub-degree accumulator)
+//
+	if (control_mouse_turn)
+	{
+		static int mouse_anglefrac = 0;
+		mouse_anglefrac += control_mouse_turn;
+		int mouseunits = mouse_anglefrac / ANGLESCALE;
+		mouse_anglefrac -= mouseunits * ANGLESCALE;
+		ob->angle -= mouseunits;
+		if (ob->angle >= ANGLES)
+			ob->angle -= ANGLES;
+		if (ob->angle < 0)
+			ob->angle += ANGLES;
+	}
+
 	if (gamestate.victoryflag)		// watching the BJ actor
 		return;
 
