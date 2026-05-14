@@ -909,6 +909,8 @@ extern	int			viewsize;
 // curent user input
 //
 extern	int			controlx,controly;		// range from -100 to 100
+extern	int			control_strafe;			// A/D keyboard strafe (always lateral)
+extern	int			control_mouse_turn;		// mouse X delta (always turn)
 extern	boolean		buttonstate[NUMBUTTONS];
 
 extern	boolean		demorecord,demoplayback;

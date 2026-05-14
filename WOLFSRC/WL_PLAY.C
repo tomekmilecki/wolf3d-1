@@ -2,6 +2,9 @@
 
 #include "WL_DEF.H"
 #pragma hdrstop
+#ifdef __clang__
+#include "input.h"
+#endif
 
 
 /*
@@ -75,6 +78,8 @@ memptr		demobuffer;
 // curent user input
 //
 int			controlx,controly;		// range from -100 to 100 per tic
+int			control_strafe    = 0;
+int			control_mouse_turn = 0;
 boolean		buttonstate[NUMBUTTONS];
 
 
@@ -366,9 +371,9 @@ void PollKeyboardMove (void)
 		if (KeyboardMoveDown (di_south, sc_S))
 			controly += RUNMOVE*tics;
 		if (KeyboardMoveDown (di_west, sc_A))
-			controlx -= RUNMOVE*tics;
+			control_strafe -= RUNMOVE*tics;
 		if (KeyboardMoveDown (di_east, sc_D))
-			controlx += RUNMOVE*tics;
+			control_strafe += RUNMOVE*tics;
 #else
 		if (Keyboard[dirscan[di_north]])
 			controly -= RUNMOVE*tics;
@@ -388,9 +393,9 @@ void PollKeyboardMove (void)
 		if (KeyboardMoveDown (di_south, sc_S))
 			controly += BASEMOVE*tics;
 		if (KeyboardMoveDown (di_west, sc_A))
-			controlx -= BASEMOVE*tics;
+			control_strafe -= BASEMOVE*tics;
 		if (KeyboardMoveDown (di_east, sc_D))
-			controlx += BASEMOVE*tics;
+			control_strafe += BASEMOVE*tics;
 #else
 		if (Keyboard[dirscan[di_north]])
 			controly -= BASEMOVE*tics;
@@ -415,14 +420,7 @@ void PollKeyboardMove (void)
 
 void PollMouseMove (void)
 {
-	int	mousexmove,mouseymove;
-
-	Mouse(MDelta);
-	mousexmove = _CX;
-	mouseymove = _DX;
-
-	controlx += mousexmove*10/(13-mouseadjustment);
-	controly += mouseymove*20/(13-mouseadjustment);
+	control_mouse_turn += IN_ConsumeMouseDX();
 }
 
 
@@ -534,8 +532,10 @@ void PollControls (void)
 	else
 		CalcTics ();
 
-	controlx = 0;
-	controly = 0;
+	controlx           = 0;
+	controly           = 0;
+	control_strafe     = 0;
+	control_mouse_turn = 0;
 	memcpy (buttonheld,buttonstate,sizeof(buttonstate));
 	memset (buttonstate,0,sizeof(buttonstate));
 
