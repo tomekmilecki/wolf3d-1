@@ -3,7 +3,7 @@
 #include "WL_DEF.H"
 #pragma hdrstop
 #ifdef __clang__
-#include "input.h"
+int IN_ConsumeMouseDX(void);  /* declared in src/platform/input.h */
 #endif
 
 
