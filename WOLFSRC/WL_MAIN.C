@@ -195,7 +195,7 @@ void ReadConfig(void)
 		joystickport = 0;
 		joystickprogressive = false;
 
-		viewsize = 15;
+		viewsize = 19;
 		mouseadjustment=5;
 	}
 
