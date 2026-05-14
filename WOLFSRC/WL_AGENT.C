@@ -18,6 +18,7 @@
 #define MOVESCALE		150l
 #define BACKMOVESCALE	100l
 #define ANGLESCALE		20
+#define MOUSE_ANGLESCALE	4	/* pixels per angle unit; lower = faster turn */
 
 /*
 =============================================================================
@@ -239,8 +240,8 @@ void ControlMovement (objtype *ob)
 	{
 		static int mouse_anglefrac = 0;
 		mouse_anglefrac += control_mouse_turn;
-		int mouseunits = mouse_anglefrac / ANGLESCALE;
-		mouse_anglefrac -= mouseunits * ANGLESCALE;
+		int mouseunits = mouse_anglefrac / MOUSE_ANGLESCALE;
+		mouse_anglefrac -= mouseunits * MOUSE_ANGLESCALE;
 		ob->angle -= mouseunits;
 		if (ob->angle >= ANGLES)
 			ob->angle -= ANGLES;
