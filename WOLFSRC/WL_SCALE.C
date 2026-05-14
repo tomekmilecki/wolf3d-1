@@ -259,6 +259,12 @@ static uint16_t *ClangShapeCommands(t_compshape _seg *shape, uint16_t offset)
 	return (uint16_t *)((byte *)shape + offset);
 }
 
+static byte ClangShapePixel(t_compshape _seg *shape, uint16_t source, int srcy)
+{
+	/* Sprite source offsets are DOS 16-bit segment offsets and may wrap. */
+	return ((byte *)shape)[(uint16_t)(source + srcy)];
+}
+
 static boolean ClangValidSpriteNumber(int shapenum)
 {
 	return shapenum >= 0 && PMSpriteStart + shapenum < PMSoundStart;
@@ -285,9 +291,8 @@ static void ClangDrawScaledColumn(void)
 	while (cmd[0])
 	{
 		int endpix = cmd[0] >> 1;
-		int source = cmd[1];
+		uint16_t source = cmd[1];
 		int startpix = cmd[2] >> 1;
-		byte *sourcebase = ((byte *)clang_shape) + source;
 
 		cmd += 3;
 
@@ -298,7 +303,7 @@ static void ClangDrawScaledColumn(void)
 
 		for (int srcy = startpix; srcy < endpix; srcy++)
 		{
-			byte color = sourcebase[srcy];
+			byte color = ClangShapePixel(clang_shape, source, srcy);
 			int y0 = toppix + (int)(((long)srcy * clang_scaled_height) >> 6);
 			int y1 = toppix + (int)(((long)(srcy + 1) * clang_scaled_height) >> 6);
 

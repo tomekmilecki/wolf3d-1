@@ -430,7 +430,7 @@ void US_ControlPanel(byte scancode)
 			VL_FadeIn(0,255,grsegs[IDGUYSPALETTE],30);
 			UNCACHEGRCHUNK(IDGUYSPALETTE);
 
-			while (Keyboard[sc_I] || Keyboard[sc_D]);
+			IN_WaitForKeyUp(sc_I,sc_D,sc_None);
 			IN_ClearKeysDown();
 			IN_Ack();
 
@@ -1905,7 +1905,7 @@ void MouseSensitivity(void)
 					VWB_Bar(61+20*mouseadjustment,98,19,9,READHCOLOR);
 					VW_UpdateScreen();
 					SD_PlaySound(MOVEGUN1SND);
-					while(Keyboard[sc_LeftArrow]);
+					IN_WaitForKeyUp(sc_LeftArrow,sc_None,sc_None);
 					WaitKeyUp();
 				}
 				break;
@@ -1921,7 +1921,7 @@ void MouseSensitivity(void)
 					VWB_Bar(61+20*mouseadjustment,98,19,9,READHCOLOR);
 					VW_UpdateScreen();
 					SD_PlaySound(MOVEGUN1SND);
-					while(Keyboard[sc_RightArrow]);
+					IN_WaitForKeyUp(sc_RightArrow,sc_None,sc_None);
 					WaitKeyUp();
 				}
 				break;
@@ -3653,7 +3653,7 @@ int Confirm(char far *string)
 		ShootSnd();
 	}
 
-	while(Keyboard[sc_S] || Keyboard[sc_N] || Keyboard[sc_Escape]);
+	IN_WaitForKeyUp(sc_S,sc_N,sc_Escape);
 
 	#else
 
@@ -3663,7 +3663,7 @@ int Confirm(char far *string)
 		ShootSnd();
 	}
 
-	while(Keyboard[sc_Y] || Keyboard[sc_N] || Keyboard[sc_Escape]);
+	IN_WaitForKeyUp(sc_Y,sc_N,sc_Escape);
 	#endif
 
 	IN_ClearKeysDown();
@@ -3708,7 +3708,7 @@ int GetYorN(int x,int y,int pic)
 		ShootSnd();
 	}
 
-	while(Keyboard[sc_S] || Keyboard[sc_N] || Keyboard[sc_Escape]);
+	IN_WaitForKeyUp(sc_S,sc_N,sc_Escape);
 
 	#else
 
@@ -3718,7 +3718,7 @@ int GetYorN(int x,int y,int pic)
 		ShootSnd();
 	}
 
-	while(Keyboard[sc_Y] || Keyboard[sc_N] || Keyboard[sc_Escape]);
+	IN_WaitForKeyUp(sc_Y,sc_N,sc_Escape);
 	#endif
 
 	IN_ClearKeysDown();
