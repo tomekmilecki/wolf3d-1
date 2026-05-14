@@ -538,6 +538,20 @@ void HitVertWall (void)
 	int			wallpic;
 	unsigned	texture;
 
+#ifdef __clang__
+	{
+		static int once = 0;
+		if (!once) {
+			once = 1;
+			FILE *dbgf = fopen("/tmp/wolf3d_walldbg.log","a");
+			if (dbgf) {
+				fprintf(dbgf,"[HVW] HitVertWall called: tilehit=%u\n",(unsigned)tilehit);
+				fclose(dbgf);
+			}
+		}
+	}
+#endif
+
 	texture = (yintercept>>4)&0xfc0;
 	if (xtilestep == -1)
 	{
@@ -614,6 +628,20 @@ void HitHorizWall (void)
 {
 	int			wallpic;
 	unsigned	texture;
+
+#ifdef __clang__
+	{
+		static int once = 0;
+		if (!once) {
+			once = 1;
+			FILE *dbgf = fopen("/tmp/wolf3d_walldbg.log","a");
+			if (dbgf) {
+				fprintf(dbgf,"[HHW] HitHorizWall called: tilehit=%u\n",(unsigned)tilehit);
+				fclose(dbgf);
+			}
+		}
+	}
+#endif
 
 	texture = (xintercept>>4)&0xfc0;
 	if (ytilestep == -1)
@@ -1420,6 +1448,27 @@ void WallRefresh (void)
 	ypartialup = TILEGLOBAL-ypartialdown;
 
 	lastside = -1;			// the first pixel is on a new wall
+
+#ifdef __clang__
+	{
+		static int wrdone = 0;
+		if (!wrdone) {
+			wrdone = 1;
+			int wc=0, dc=0;
+			for (int yy=0;yy<64;yy++) for (int xx=0;xx<64;xx++) {
+				if (tilemap[xx][yy] && !(tilemap[xx][yy]&0x80)) wc++;
+				if (tilemap[xx][yy] & 0x80) dc++;
+			}
+			FILE *dbgf = fopen("/tmp/wolf3d_walldbg.log","a");
+			if (dbgf) {
+				fprintf(dbgf,"[WR1] viewx=%ld viewy=%ld focaltx=%d focalty=%d walls=%d doors=%d\n",
+					viewx,viewy,focaltx,focalty,wc,dc);
+				fclose(dbgf);
+			}
+		}
+	}
+#endif
+
 	AsmRefresh ();
 	ScalePost ();			// no more optimization on last post
 }
