@@ -9,6 +9,8 @@
 //===========================================================================
 
 #ifdef __clang__
+typedef uint16_t mapword_t;
+
 typedef	struct __attribute__((packed))
 {
 	int32_t		planestart[3];
@@ -17,6 +19,8 @@ typedef	struct __attribute__((packed))
 	char		name[16];
 } maptype;
 #else
+typedef unsigned mapword_t;
+
 typedef	struct
 {
 	long		planestart[3];
@@ -33,7 +37,7 @@ extern	char		audioname[13];
 extern	byte 		_seg	*tinf;
 extern	int			mapon;
 
-extern	unsigned	_seg	*mapsegs[MAPPLANES];
+extern	mapword_t	_seg	*mapsegs[MAPPLANES];
 extern	maptype		_seg	*mapheaderseg[NUMMAPS];
 extern	byte		_seg	*audiosegs[NUMSNDCHUNKS];
 extern	void		_seg	*grsegs[NUMCHUNKS];

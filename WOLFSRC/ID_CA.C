@@ -69,7 +69,7 @@ typedef struct
 byte 		_seg	*tinf;
 int			mapon;
 
-unsigned	_seg	*mapsegs[MAPPLANES];
+mapword_t	_seg	*mapsegs[MAPPLANES];
 maptype		_seg	*mapheaderseg[NUMMAPS];
 byte		_seg	*audiosegs[NUMSNDCHUNKS];
 void		_seg	*grsegs[NUMCHUNKS];

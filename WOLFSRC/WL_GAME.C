@@ -629,11 +629,8 @@ void ScanInfoPlane (void)
 void SetupGameLevel (void)
 {
 	int	x,y,i;
-#ifdef __clang__
-	uint16_t *map; unsigned tile,spot;
-#else
-	unsigned	far *map,tile,spot;
-#endif
+	mapword_t far *map;
+	unsigned tile,spot;
 
 
 	if (!loadedgame)
@@ -645,6 +642,8 @@ void SetupGameLevel (void)
 	 gamestate.secretcount=
 	 gamestate.killcount=
 	 gamestate.treasurecount=0;
+	 pwallstate = pwallpos = pwallx = pwally = 0;
+	 pwalldir = 0;
 	}
 
 	if (demoplayback || demorecord)

@@ -350,7 +350,7 @@ void InitDoorList (void)
 void SpawnDoor (int tilex, int tiley, boolean vertical, int lock)
 {
 	int	areanumber;
-	unsigned	far *map;
+	mapword_t	far *map;
 
 	if (doornum==64)
 		Quit ("64+ doors on level!");
@@ -553,7 +553,7 @@ void DoorOpen (int door)
 void DoorOpening (int door)
 {
 	int		area1,area2;
-	unsigned	far	*map;
+	mapword_t	far	*map;
 	long	position;
 
 	position = doorposition[door];
@@ -616,7 +616,7 @@ void DoorOpening (int door)
 void DoorClosing (int door)
 {
 	int		area1,area2,move;
-	unsigned	far	*map;
+	mapword_t	far	*map;
 	long	position;
 	int		tilex,tiley;
 
@@ -733,7 +733,14 @@ void PushWall (int checkx, int checky, int dir)
 	int		oldtile;
 
 	if (pwallstate)
-	  return;
+	{
+		if (pwallx < MAPSIZE && pwally < MAPSIZE
+		&& (tilemap[pwallx][pwally] & 0xc0) == 0xc0)
+			return;
+
+		pwallstate = pwallpos = pwallx = pwally = 0;
+		pwalldir = 0;
+	}
 
 
 	oldtile = tilemap[checkx][checky];
@@ -888,4 +895,3 @@ void MovePWalls (void)
 	pwallpos = (pwallstate/2)&63;
 
 }
-
