@@ -451,6 +451,16 @@ boolean SaveTheGame(int file,int x,int y)
 	//
 	CA_FarWrite (file,(void far *)&checksum,sizeof(checksum));
 
+#ifdef __clang__
+	/* macOS port: write ASLR anchor so LoadTheGame can patch ob->state pointers.
+	 * configname is a global in the data segment — its address shifts with ASLR
+	 * each run, so saving it lets the loader compute the slide delta. */
+	{
+		uintptr_t _anchor = (uintptr_t)(void *)configname;
+		CA_FarWrite(file, (void far *)&_anchor, sizeof(_anchor));
+	}
+#endif
+
 	return(true);
 }
 
@@ -472,6 +482,10 @@ boolean LoadTheGame(int file,int x,int y)
 
 	checksum = 0;
 
+#ifdef __clang__
+	fprintf(stderr, "[WOLF3D LOAD] LoadTheGame: entered file=%d\n", file);
+#endif
+
 	DiskFlopAnim(x,y);
 	CA_FarRead (file,(void far *)&gamestate,sizeof(gamestate));
 	checksum = DoChecksum((byte far *)&gamestate,sizeof(gamestate),checksum);
@@ -486,7 +500,13 @@ boolean LoadTheGame(int file,int x,int y)
 #endif
 
 	DiskFlopAnim(x,y);
+#ifdef __clang__
+	fprintf(stderr, "[WOLF3D LOAD] calling SetupGameLevel\n");
+#endif
 	SetupGameLevel ();
+#ifdef __clang__
+	fprintf(stderr, "[WOLF3D LOAD] SetupGameLevel done, loading tile/actor data\n");
+#endif
 
 	DiskFlopAnim(x,y);
 	CA_FarRead (file,(void far *)tilemap,sizeof(tilemap));
@@ -515,7 +535,32 @@ boolean LoadTheGame(int file,int x,int y)
 		memcpy (new,&nullobj,sizeof(nullobj)-4);
 	}
 
+#ifdef __clang__
+	/* macOS port: the DOS "-4" trick excluded 2-byte near-pointers; on 64-bit
+	 * macOS objtype* is 8 bytes so sizeof(nullobj)-4 does NOT exclude next/prev.
+	 * CA_FarRead into player also overwrites its link fields.  ASLR means every
+	 * saved address is invalid after a restart.
+	 * Fix 1: rebuild the linked list from sequentially-allocated objlist[].
+	 * Fix 2: re-stamp actorat[] with live actor pointers. */
+	{
+		int _n = (int)(lastobj - objlist) + 1;
+		fprintf(stderr, "[WOLF3D LOAD] actor loop done: %d actors, lastobj=%p player=%p\n",
+		        _n, (void*)lastobj, (void*)player);
+		objlist[0].prev = NULL;
+		for (int _i = 0; _i < _n - 1; _i++) {
+			objlist[_i].next     = &objlist[_i + 1];
+			objlist[_i + 1].prev = &objlist[_i];
+		}
+		objlist[_n - 1].next = NULL;
+		fprintf(stderr, "[WOLF3D LOAD] Fix1: linked list rebuilt (%d actors)\n", _n);
+	}
 
+	{
+		int _acnt = 0;
+		for (ob = player; ob; ob = ob->next) { actorat[ob->tilex][ob->tiley] = ob; _acnt++; }
+		fprintf(stderr, "[WOLF3D LOAD] Fix2: actorat re-stamped (%d actors walked)\n", _acnt);
+	}
+#endif
 
 	DiskFlopAnim(x,y);
 	CA_FarRead (file,(void far *)&laststatobj,sizeof(laststatobj));
@@ -562,6 +607,61 @@ boolean LoadTheGame(int file,int x,int y)
 	   gamestate.bestweapon = wp_pistol;
 	 gamestate.ammo = 8;
 	}
+
+#ifdef __clang__
+	/* Fix 3/4/5: patch ASLR-shifted pointers using anchor appended by SaveTheGame.
+	 * All globals (statetype*, statobjlist, spotvis) live in the same image and
+	 * slide by the same delta each run.  Old saves without the anchor skip all. */
+	{
+		uintptr_t _saved_anchor = 0;
+		boolean _anchor_ok = CA_FarRead(file, (void far *)&_saved_anchor, sizeof(_saved_anchor))
+		                     && _saved_anchor;
+		uintptr_t _cur_anchor = (uintptr_t)(void *)configname;
+		intptr_t _delta = _anchor_ok ? ((intptr_t)_cur_anchor - (intptr_t)_saved_anchor) : 0;
+
+		fprintf(stderr, "[WOLF3D LOAD] ASLR anchor: %s  saved=0x%016lx  cur=0x%016lx  delta=%ld\n",
+		        _anchor_ok ? "OK" : "FAIL(old save)",
+		        (unsigned long)_saved_anchor, (unsigned long)_cur_anchor, (long)_delta);
+
+		/* Fix 3: ob->state */
+		{
+			int _cnt = 0;
+			for (ob = player; ob; ob = ob->next) {
+				if (_cnt < 4)
+					fprintf(stderr, "[WOLF3D LOAD]   actor[%d] active=%d state=%p\n",
+					        _cnt, (int)ob->active, (void*)ob->state);
+				if (_delta && ob->state)
+					ob->state = (statetype *)((uintptr_t)ob->state + (uintptr_t)_delta);
+				_cnt++;
+			}
+			fprintf(stderr, "[WOLF3D LOAD] Fix3: patched state on %d actors\n", _cnt);
+		}
+
+		/* Fix 4: laststatobj is a saved pointer into statobjlist[] */
+		fprintf(stderr, "[WOLF3D LOAD] Fix4: laststatobj=%p  statobjlist=%p\n",
+		        (void*)laststatobj, (void*)statobjlist);
+		if (_delta && laststatobj)
+			laststatobj = (statobj_t *)((uintptr_t)laststatobj + (uintptr_t)_delta);
+		fprintf(stderr, "[WOLF3D LOAD] Fix4: laststatobj patched to %p\n", (void*)laststatobj);
+
+		/* Fix 5: statobj_t::visspot pointers into spotvis[][] */
+		{
+			int _vcnt = 0;
+			statobj_t *_end = (laststatobj < statobjlist) ? statobjlist : laststatobj;
+			for (statobj_t *_s = statobjlist; _s <= _end; _s++) {
+				if (_s->visspot) {
+					if (_vcnt < 4)
+						fprintf(stderr, "[WOLF3D LOAD]   statobj visspot=%p\n", (void*)_s->visspot);
+					if (_delta)
+						_s->visspot = (byte *)((uintptr_t)_s->visspot + (uintptr_t)_delta);
+					_vcnt++;
+				}
+			}
+			fprintf(stderr, "[WOLF3D LOAD] Fix5: patched %d visspot ptrs\n", _vcnt);
+		}
+	}
+	fprintf(stderr, "[WOLF3D LOAD] LoadTheGame: returning true\n");
+#endif
 
 	return true;
 }
@@ -805,6 +905,7 @@ void FinishSignon (void)
 
 	#endif
 
+	VW_UpdateScreen ();		/* macOS port: flush "Press a key" text before waiting */
 	if (!NoWait)
 		IN_Ack ();
 

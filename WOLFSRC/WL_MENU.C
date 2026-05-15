@@ -7,6 +7,11 @@
 #include "wl_def.h"
 #pragma hdrstop
 
+void VL_ToggleRenderEngine(void);
+int VL_GetRenderEngine(void);
+void VL_SetRenderEngine(int engine);
+const char *VL_RenderEngineName(void);
+
 //
 // PRIVATE PROTOTYPES
 //
@@ -2732,7 +2737,7 @@ void DrawCustKeys(int hilight)
 ////////////////////////////////////////////////////////////////////
 void CP_ChangeView(void)
 {
-	int exit=0,oldview,newview;
+	int exit=0,oldview,newview,oldrenderer;
 	ControlInfo ci;
 
 
@@ -2740,6 +2745,7 @@ void CP_ChangeView(void)
 	WindowW=320;
 	WindowH=200;
 	newview=oldview=viewwidth/16;
+	oldrenderer=VL_GetRenderEngine();
 	DrawChangeView(oldview);
 
 	do
@@ -2778,12 +2784,22 @@ void CP_ChangeView(void)
 		#endif
 			PicturePause();
 
+		if (Keyboard[sc_R])
+		{
+			VL_ToggleRenderEngine();
+			SD_PlaySound(SHOOTSND);
+			DrawChangeView(newview);
+			IN_WaitForKeyUp(sc_R,sc_None,sc_None);
+			IN_ClearKeysDown();
+		}
+
 		if (ci.button0 || Keyboard[sc_Enter])
 			exit=1;
 		else
 		if (ci.button1 || Keyboard[sc_Escape])
 		{
 			viewwidth=oldview*16;
+			VL_SetRenderEngine(oldrenderer);
 			SD_PlaySound(ESCPRESSEDSND);
 			MenuFadeOut();
 			return;
@@ -2824,8 +2840,8 @@ void DrawChangeView(int view)
 	SETFONTCOLOR(HIGHLIGHT,BKGDCOLOR);
 
 	US_CPrint(STR_SIZE1"\n");
-	US_CPrint(STR_SIZE2"\n");
-	US_CPrint(STR_SIZE3);
+	US_CPrint("R cycles renderer\n");
+	US_CPrint(VL_RenderEngineName());
 #endif
 	VW_UpdateScreen();
 
